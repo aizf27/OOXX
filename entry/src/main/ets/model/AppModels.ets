@@ -41,11 +41,12 @@ export class GameSession {
   readonly moves: number;
   readonly message: string;
   readonly puzzleAnswer: Move | null;
+  readonly puzzleSolved: boolean | null;
   readonly isAiThinking: boolean;
 
   constructor(board: Board = new Board(), turn: Mark = Mark.X, playerMark: Mark = Mark.X,
     kind: GameKind = GameKind.AI_3X3, moves: number = 0, message: string = '轮到你了',
-    puzzleAnswer: Move | null = null, isAiThinking: boolean = false) {
+    puzzleAnswer: Move | null = null, puzzleSolved: boolean | null = null, isAiThinking: boolean = false) {
     this.board = board;
     this.turn = turn;
     this.playerMark = playerMark;
@@ -53,6 +54,7 @@ export class GameSession {
     this.moves = moves;
     this.message = message;
     this.puzzleAnswer = puzzleAnswer;
+    this.puzzleSolved = puzzleSolved;
     this.isAiThinking = isAiThinking;
   }
 }
