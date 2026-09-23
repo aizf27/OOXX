@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -64,6 +65,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -82,11 +84,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -97,6 +101,7 @@ import com.kangsi.ooxx.game.Board
 import com.kangsi.ooxx.game.Mark
 import com.kangsi.ooxx.game.Move
 import com.kangsi.ooxx.match.BluetoothMatchService
+import com.kangsi.ooxx.R
 import com.kangsi.ooxx.ui.theme.Coral
 import com.kangsi.ooxx.ui.theme.Ink
 import com.kangsi.ooxx.ui.theme.Paper
@@ -163,14 +168,19 @@ private fun SplashScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("OOXX", fontSize = 72.sp, fontWeight = FontWeight.Black, color = Coral)
-        Text("康思小游戏", fontSize = 30.sp, fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+            Text("O", fontSize = 52.sp, fontWeight = FontWeight.Black, color = Coral)
+            Text("O", fontSize = 52.sp, fontWeight = FontWeight.Black, color = Sky)
+            Text("X", fontSize = 52.sp, fontWeight = FontWeight.Black, color = Ink)
+            Text("X", fontSize = 52.sp, fontWeight = FontWeight.Black, color = Ink)
+        }
+        Text("康思小游戏", fontSize = 25.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(32.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             Mascot("O", Coral)
             Mascot("X", Sky)
         }
-        Spacer(Modifier.height(34.dp))
+        Spacer(Modifier.height(24.dp))
         Text("简单一局，快乐加倍！", color = Color.Gray)
     }
 }
@@ -181,7 +191,14 @@ private fun Mascot(text: String, color: Color) {
         Modifier.size(82.dp).clip(CircleShape).background(color.copy(alpha = .17f))
             .border(4.dp, color, CircleShape),
         contentAlignment = Alignment.Center
-    ) { Text(text, color = color, fontSize = 50.sp, fontWeight = FontWeight.Black) }
+    ) {
+        Image(
+            painter = painterResource(if (text == "O") R.drawable.mascot_o else R.drawable.mascot_x),
+            contentDescription = if (text == "O") "O 吉祥物" else "X 吉祥物",
+            modifier = Modifier.fillMaxSize().padding(2.dp),
+            contentScale = ContentScale.Fit
+        )
+    }
 }
 
 @Composable
@@ -190,22 +207,27 @@ private fun OnboardingScreen(onStart: () -> Unit) {
         Modifier.fillMaxSize().statusBarsPadding().padding(28.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(Modifier.height(42.dp))
-        Text("三分钟，来一局", fontSize = 34.sp, fontWeight = FontWeight.Black)
-        Spacer(Modifier.height(42.dp))
+        Spacer(Modifier.height(28.dp))
+        Text("三分钟，来一局", fontSize = 25.sp, fontWeight = FontWeight.Black)
+        Spacer(Modifier.height(22.dp))
         DemoBoard()
-        Spacer(Modifier.height(36.dp))
-        Text("不复杂，但总有新乐趣 ❤", color = Color.DarkGray, fontSize = 17.sp)
+        Spacer(Modifier.height(17.dp))
+        Text("不复杂，但总有新乐趣 ❤", color = Color.DarkGray, fontSize = 14.sp)
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Mascot("O", Coral)
+            Mascot("X", Sky)
+        }
         Spacer(Modifier.weight(1f))
         PrimaryButton("开始体验", onStart)
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(14.dp))
     }
 }
 
 @Composable
 private fun DemoBoard() {
     val marks = listOf("O", "", "X", "", "O", "", "X", "", "O")
-    Column(Modifier.size(230.dp).border(3.dp, Ink, RoundedCornerShape(10.dp))) {
+    Column(Modifier.size(168.dp).border(2.dp, Ink, RoundedCornerShape(5.dp))) {
         repeat(3) { row ->
             Row(Modifier.weight(1f)) {
                 repeat(3) { col ->
@@ -215,7 +237,7 @@ private fun DemoBoard() {
                             .border(1.5.dp, Ink.copy(alpha = .7f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(value, color = if (value == "O") Coral else Sky, fontSize = 44.sp, fontWeight = FontWeight.Black)
+                        Text(value, color = if (value == "O") Coral else Sky, fontSize = 37.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -227,41 +249,41 @@ private fun DemoBoard() {
 private fun HomeScreen(openMode: () -> Unit, local: () -> Unit, room: () -> Unit, daily: () -> Unit) {
     LazyColumn(
         Modifier.fillMaxSize().statusBarsPadding(),
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item { ProfileHeader() }
         item {
-            Text("今天想怎么玩？", fontSize = 28.sp, fontWeight = FontWeight.Black)
-            Text("选择一种模式，马上开局", color = Color.Gray)
-        }
-        item {
-            FeatureCard("⚡", "快速对战", "智能 AI · 随时开局", Sunny, openMode)
+            Text("今天想怎么玩？", fontSize = 21.sp, fontWeight = FontWeight.Black)
+            Text("选择一种模式，马上开局", color = Color.Gray, fontSize = 13.sp)
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                SmallModeCard("👥", "双人同屏", "面对面来一局", Sky, Modifier.weight(1f), local)
-                SmallModeCard("♛", "好友房间", "网络 / 蓝牙", Coral, Modifier.weight(1f), room)
+                SmallModeCard("ϟ", "快速对战", "智能 AI", Sunny, Modifier.weight(1f), openMode)
+                SmallModeCard("♙", "双人同屏", "面对面一局", Sky, Modifier.weight(1f), local)
             }
         }
-        item { FeatureCard("★", "每日挑战", "网络题库 · 每题唯一解", Teal, daily) }
-        item { InfoStrip("题目会在本机再次求解，确保答案唯一后才进入游戏。") }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                SmallModeCard("♧", "好友房间", "网络 / 蓝牙", Coral, Modifier.weight(1f), room)
+                SmallModeCard("♛", "每日挑战", "每题唯一解", Teal, Modifier.weight(1f), daily)
+            }
+        }
     }
 }
 
 @Composable
 private fun ProfileHeader() {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(54.dp).clip(CircleShape).background(Sky.copy(.25f)), contentAlignment = Alignment.Center) {
-            Text("🙂", fontSize = 30.sp)
+        Box(Modifier.size(45.dp).clip(CircleShape).background(Sky.copy(.25f)), contentAlignment = Alignment.Center) {
+            Image(painterResource(R.drawable.avatar_kangsi), "康思头像", Modifier.fillMaxSize().padding(2.dp), contentScale = ContentScale.Crop)
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
-            Text("康思", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text("小程序游客 · 无需密码", color = Color.Gray, fontSize = 13.sp)
+            Text("康思", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("120", color = Color(0xFFE5A900), fontSize = 13.sp)
         }
-        Text("● 120", color = Color(0xFFE5A900), fontWeight = FontWeight.Bold)
-        Icon(Icons.Rounded.Settings, null, Modifier.padding(start = 12.dp))
+        Icon(Icons.Rounded.Settings, null, Modifier.size(22.dp))
     }
 }
 
@@ -273,12 +295,12 @@ private fun FeatureCard(icon: String, title: String, subtitle: String, color: Co
         shape = RoundedCornerShape(22.dp),
         modifier = Modifier.fillMaxWidth().border(2.dp, color.copy(.7f), RoundedCornerShape(22.dp))
     ) {
-        Row(Modifier.padding(22.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(icon, fontSize = 38.sp)
-            Spacer(Modifier.width(18.dp))
+        Row(Modifier.padding(17.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(icon, fontSize = 31.sp)
+            Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Text(subtitle, color = Color.DarkGray)
+                Text(title, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                Text(subtitle, color = Color.DarkGray, fontSize = 13.sp)
             }
             Icon(Icons.Rounded.ChevronRight, null)
         }
@@ -289,14 +311,14 @@ private fun FeatureCard(icon: String, title: String, subtitle: String, color: Co
 private fun SmallModeCard(icon: String, title: String, subtitle: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        modifier = modifier.height(150.dp).border(2.dp, color.copy(.7f), RoundedCornerShape(22.dp)),
+        modifier = modifier.height(114.dp).border(2.dp, color.copy(.7f), RoundedCornerShape(18.dp)),
         colors = CardDefaults.cardColors(containerColor = color.copy(.22f)),
-        shape = RoundedCornerShape(22.dp)
+        shape = RoundedCornerShape(18.dp)
     ) {
-        Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Text(icon, fontSize = 31.sp)
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Black)
-            Text(subtitle, fontSize = 12.sp, color = Color.DarkGray)
+        Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Text(icon, fontSize = 24.sp)
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Black)
+            Text(subtitle, fontSize = 11.sp, color = Color.DarkGray)
         }
     }
 }
@@ -315,13 +337,13 @@ private fun InfoStrip(text: String) {
 @Composable
 private fun ModeScreen(loading: Boolean, back: () -> Unit, start: (GameKind) -> Unit) {
     var selected by remember { mutableStateOf(GameKind.AI_3X3) }
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().padding(18.dp)) {
         PageTitle("选择模式", back)
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(13.dp))
         ModeOption("▦", "经典 3×3", "完整 Minimax，不会漏掉最优解", GameKind.AI_3X3, selected) { selected = it }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(9.dp))
         ModeOption("▦", "进阶 5×5", "四子连线，更大的挑战", GameKind.AI_5X5, selected) { selected = it }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(9.dp))
         ModeOption("⏱", "每日唯一解", "从网络获取并在本地验证", GameKind.DAILY, selected) { selected = it }
         Spacer(Modifier.weight(1f))
         if (loading) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
@@ -337,13 +359,13 @@ private fun ModeOption(icon: String, title: String, subtitle: String, kind: Game
         colors = CardDefaults.cardColors(containerColor = if (active) Sky.copy(.17f) else Color.White),
         modifier = Modifier.fillMaxWidth().border(if (active) 3.dp else 1.dp, if (active) Sky else Color.LightGray, RoundedCornerShape(18.dp))
     ) {
-        Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(icon, fontSize = 32.sp, color = Sky)
-            Column(Modifier.padding(horizontal = 16.dp).weight(1f)) {
-                Text(title, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                Text(subtitle, fontSize = 13.sp, color = Color.Gray)
+        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(icon, fontSize = 26.sp, color = Sky)
+            Column(Modifier.padding(horizontal = 12.dp).weight(1f)) {
+                Text(title, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text(subtitle, fontSize = 11.sp, color = Color.Gray)
             }
-            Text(if (active) "●" else "○", color = Sky, fontSize = 24.sp)
+            Icon(Icons.Rounded.ChevronRight, contentDescription = "选择$title", tint = Ink.copy(alpha = .7f))
         }
     }
 }
@@ -369,6 +391,27 @@ private fun RoomScreen(back: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item { PageTitle("好友房间", back) }
+        item {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painterResource(R.drawable.avatar_kangsi),
+                    "康思",
+                    Modifier.size(58.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                Text("  ×  ", color = Ink.copy(alpha = .55f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Image(
+                    painterResource(R.drawable.avatar_xiaoming),
+                    "好友",
+                    Modifier.size(58.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
         item {
             Row(Modifier.fillMaxWidth().background(SoftGray, RoundedCornerShape(16.dp)).padding(4.dp)) {
                 ConnectionTab("网络对战", Icons.Rounded.SignalWifi4Bar, tab == 0, Modifier.weight(1f)) { tab = 0 }
@@ -450,15 +493,15 @@ private fun GameScreen(session: GameSession, play: (Move) -> Unit, undo: () -> U
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            PlayerBadge("🙂", "康思", if (session.turn == Mark.X) Coral else Color.Gray)
+            PlayerBadge(R.drawable.avatar_kangsi, "康思", if (session.turn == Mark.X) Coral else Color.Gray)
             Text("VS", Modifier.weight(1f), textAlign = TextAlign.Center, color = Sky, fontWeight = FontWeight.Black)
-            PlayerBadge(if (session.kind == GameKind.LOCAL) "😎" else "🤖", if (session.kind == GameKind.LOCAL) "好友" else "AI", if (session.turn == Mark.O) Sky else Color.Gray)
+            PlayerBadge(R.drawable.avatar_xiaoming, if (session.kind == GameKind.LOCAL) "小明" else "AI", if (session.turn == Mark.O) Sky else Color.Gray)
         }
         Spacer(Modifier.height(8.dp))
-        Text(session.message, Modifier.background(Sunny.copy(.35f), RoundedCornerShape(12.dp)).padding(horizontal = 22.dp, vertical = 8.dp), fontSize = 21.sp, fontWeight = FontWeight.Black)
-        Spacer(Modifier.height(24.dp))
+        Text(session.message, Modifier.background(Sunny.copy(.35f), RoundedCornerShape(12.dp)).padding(horizontal = 18.dp, vertical = 7.dp), fontSize = 18.sp, fontWeight = FontWeight.Black)
+        Spacer(Modifier.height(12.dp))
         GameBoard(session.board, enabled = !session.isAiThinking && session.puzzleSolved == null, onMove = play)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
         Text(
             when (session.kind) {
                 GameKind.DAILY -> "本题已通过算法验证，存在且仅存在一个最优解"
@@ -470,7 +513,8 @@ private fun GameScreen(session: GameSession, play: (Move) -> Unit, undo: () -> U
             fontSize = 13.sp,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.weight(1f))
+        // 原型中的操作区紧随棋盘，而不是吸附到系统底部。
+        Spacer(Modifier.height(24.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GameAction(Icons.Rounded.Undo, "悔棋", Modifier.weight(1f), undo)
             GameAction(Icons.Rounded.Casino, "表情", Modifier.weight(1f)) { }
@@ -481,16 +525,18 @@ private fun GameScreen(session: GameSession, play: (Move) -> Unit, undo: () -> U
 }
 
 @Composable
-private fun PlayerBadge(emoji: String, name: String, color: Color) {
+private fun PlayerBadge(avatarRes: Int, name: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(48.dp).border(3.dp, color, CircleShape), contentAlignment = Alignment.Center) { Text(emoji, fontSize = 28.sp) }
-        Text(name, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Box(Modifier.size(34.dp).border(2.dp, color, CircleShape), contentAlignment = Alignment.Center) {
+            Image(painterResource(avatarRes), "$name 头像", Modifier.fillMaxSize().clip(CircleShape).padding(2.dp), contentScale = ContentScale.Crop)
+        }
+        Text(name, fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 private fun GameBoard(board: Board, enabled: Boolean, onMove: (Move) -> Unit) {
-    val boardSize = if (board.size == 3) 318.dp else 340.dp
+    val boardSize = if (board.size == 3) 250.dp else 282.dp
     Column(Modifier.size(boardSize).border(3.dp, Ink, RoundedCornerShape(8.dp)).background(Color.White)) {
         repeat(board.size) { row ->
             Row(Modifier.weight(1f)) {
@@ -502,7 +548,7 @@ private fun GameBoard(board: Board, enabled: Boolean, onMove: (Move) -> Unit) {
                         contentAlignment = Alignment.Center
                     ) {
                         val text = when (mark) { Mark.X -> "X"; Mark.O -> "O"; else -> "" }
-                        Text(text, color = if (mark == Mark.X) Sky else Coral, fontSize = if (board.size == 3) 52.sp else 34.sp, fontWeight = FontWeight.Black)
+                        Text(text, color = if (mark == Mark.X) Sky else Coral, fontSize = if (board.size == 3) 43.sp else 30.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -512,7 +558,7 @@ private fun GameBoard(board: Board, enabled: Boolean, onMove: (Move) -> Unit) {
 
 @Composable
 private fun GameAction(icon: ImageVector, text: String, modifier: Modifier, action: () -> Unit) {
-    OutlinedButton(onClick = action, modifier = modifier.height(66.dp), shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(5.dp)) {
+    OutlinedButton(onClick = action, modifier = modifier.height(55.dp), shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(5.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, null, Modifier.size(24.dp))
             Text(text, fontSize = 12.sp)
@@ -532,18 +578,26 @@ private fun ResultScreen(result: MatchResult, session: GameSession, replay: () -
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(title, fontSize = 42.sp, fontWeight = FontWeight.Black)
-        Spacer(Modifier.height(18.dp))
-        Box(Modifier.size(138.dp).clip(CircleShape).background(color.copy(.28f)), contentAlignment = Alignment.Center) { Text(emoji, fontSize = 76.sp) }
-        Spacer(Modifier.height(26.dp))
+        Text(title, fontSize = 31.sp, fontWeight = FontWeight.Black)
+        Spacer(Modifier.height(12.dp))
+        Box(Modifier.size(110.dp).clip(CircleShape).background(color.copy(.28f)), contentAlignment = Alignment.Center) {
+            Image(
+                painterResource(if (result == MatchResult.WIN) R.drawable.mascot_victory else R.drawable.mascot_o),
+                "对局结果插图",
+                Modifier.fillMaxSize().padding(6.dp),
+                contentScale = ContentScale.Fit
+            )
+            if (result != MatchResult.WIN) Text(emoji, Modifier.align(Alignment.TopCenter), fontSize = 28.sp)
+        }
+        Spacer(Modifier.height(16.dp))
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Stat("本局用时", "${(session.moves * 7 + 12).coerceAtLeast(18)}秒")
                 Stat("步数", session.moves.toString())
                 Stat("模式", if (session.board.size == 3) "3×3" else "5×5")
             }
         }
-        Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(20.dp))
         PrimaryButton("再来一局", replay)
         Spacer(Modifier.height(12.dp))
         SecondaryButton("返回首页", home)
@@ -567,24 +621,34 @@ private fun HistoryScreen(records: List<MatchRecord>, ranking: List<RankingEntry
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item { Text("对战记录", fontSize = 30.sp, fontWeight = FontWeight.Black) }
+        item { Text("对战记录", fontSize = 23.sp, fontWeight = FontWeight.Black) }
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = Sunny.copy(.2f)), modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(84.dp).border(9.dp, Coral, CircleShape), contentAlignment = Alignment.Center) {
-                        Text("$rate%", fontSize = 19.sp, fontWeight = FontWeight.Black)
+            Card(colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(58.dp).border(7.dp, Sky, CircleShape), contentAlignment = Alignment.Center) {
+                        Text("$rate%", fontSize = 17.sp, fontWeight = FontWeight.Black)
                     }
-                    Column(Modifier.padding(start = 22.dp)) {
-                        Text("当前胜率", color = Color.Gray)
-                        Text("${records.size} 场 · $wins 胜", fontSize = 24.sp, fontWeight = FontWeight.Black)
-                        Text("继续保持，你正在变强！", color = Teal)
+                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                        Text("胜率", color = Color.Gray, fontSize = 12.sp)
+                        Text("${records.size} 场 · $wins 胜", fontSize = 18.sp, fontWeight = FontWeight.Black)
                     }
+                    Text("连胜 3 场", fontSize = 12.sp, color = Ink)
                 }
             }
         }
-        item { SectionTitle("排行榜") }
-        items(ranking.take(5)) { item -> RankingRow(item) }
-        item { SectionTitle("最近对局") }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("全部", "胜利", "失败", "平局").forEachIndexed { index, label ->
+                    Text(
+                        label,
+                        Modifier.background(if (index == 0) Teal.copy(.22f) else SoftGray, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        fontSize = 11.sp,
+                        color = if (index == 0) Teal else Color.Gray
+                    )
+                }
+            }
+        }
         if (records.isEmpty()) item { EmptyState("还没有记录，先去完成一局吧") }
         items(records.take(20)) { record -> RecordRow(record) }
     }
@@ -631,12 +695,14 @@ private fun ProfileScreen(records: List<MatchRecord>) {
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item { Text("我的", fontSize = 30.sp, fontWeight = FontWeight.Black) }
+        item { Text("我的", fontSize = 23.sp, fontWeight = FontWeight.Black) }
         item {
             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(76.dp).clip(CircleShape).background(Sky.copy(.24f)), contentAlignment = Alignment.Center) { Text("🙂", fontSize = 45.sp) }
+                Box(Modifier.size(58.dp).clip(CircleShape).background(Sky.copy(.24f)), contentAlignment = Alignment.Center) {
+                    Image(painterResource(R.drawable.avatar_kangsi), "康思头像", Modifier.fillMaxSize().padding(3.dp), contentScale = ContentScale.Crop)
+                }
                 Column(Modifier.padding(start = 16.dp).weight(1f)) {
-                    Text("康思", fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    Text("康思", fontSize = 19.sp, fontWeight = FontWeight.Black)
                     Text("小程序游客 ID · 免用户名密码", color = Color.Gray)
                 }
                 Icon(Icons.Rounded.ChevronRight, null)
@@ -660,16 +726,16 @@ private fun ProfileScreen(records: List<MatchRecord>) {
 
 @Composable
 private fun Achievement(icon: String, value: String, label: String, modifier: Modifier) {
-    Column(modifier.background(Color.White, RoundedCornerShape(16.dp)).padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(icon, fontSize = 24.sp)
-        Text(value, fontWeight = FontWeight.Black, fontSize = 20.sp)
-        Text(label, color = Color.Gray, fontSize = 12.sp)
+    Column(modifier.height(74.dp).background(Color.White, RoundedCornerShape(12.dp)).padding(7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(icon, fontSize = 18.sp)
+        Text(value, fontWeight = FontWeight.Black, fontSize = 16.sp)
+        Text(label, color = Color.Gray, fontSize = 10.sp)
     }
 }
 
 @Composable
 private fun SettingSwitch(icon: ImageVector, title: String, checked: Boolean, change: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, tint = Color.Gray)
         Text(title, Modifier.padding(start = 12.dp).weight(1f), fontWeight = FontWeight.Medium)
         Switch(checked, change)
@@ -678,7 +744,7 @@ private fun SettingSwitch(icon: ImageVector, title: String, checked: Boolean, ch
 
 @Composable
 private fun SettingLink(icon: ImageVector, title: String, detail: String) {
-    Row(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(14.dp)).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(12.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, tint = Color.Gray)
         Text(title, Modifier.padding(start = 12.dp).weight(1f), fontWeight = FontWeight.Medium)
         Text(detail, color = Color.Gray, fontSize = 12.sp)
@@ -697,7 +763,14 @@ private fun AppBottomBar(current: Screen, navigate: (Screen) -> Unit) {
                 selected = screen == current,
                 onClick = { navigate(screen) },
                 icon = { Icon(icon, label) },
-                label = { Text(label) }
+                label = { Text(label) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = Coral,
+                    selectedTextColor = Coral,
+                    indicatorColor = Color.Transparent,
+                    unselectedIconColor = Ink.copy(alpha = .62f),
+                    unselectedTextColor = Ink.copy(alpha = .62f)
+                )
             )
         }
     }
@@ -707,13 +780,13 @@ private fun AppBottomBar(current: Screen, navigate: (Screen) -> Unit) {
 private fun PageTitle(title: String, back: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(back) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "返回") }
-        Text(title, Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = 27.sp, fontWeight = FontWeight.Black)
+        Text(title, Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = 22.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.size(48.dp))
     }
 }
 
 @Composable
-private fun SectionTitle(text: String) { Text(text, fontSize = 21.sp, fontWeight = FontWeight.Black) }
+private fun SectionTitle(text: String) { Text(text, fontSize = 18.sp, fontWeight = FontWeight.Black) }
 
 @Composable
 private fun EmptyState(text: String) {
