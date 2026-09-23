@@ -1,98 +1,67 @@
-# WebSocket 通信协议草案
+# 网络协议
 
-> 状态：跨端阶段使用。第一版单机不连接服务器，但代码结构需预留仓库接口。
+> 与 Android 仓库 `server/` 当前实现对齐；默认端口 `9527`。
 
-## 1. 基本约定
+## HTTP
 
-- 传输：原生 WebSocket。
-- 数据：JSON，字段使用 `camelCase`。
-- 服务端按接收顺序处理操作。
-- 服务端维护房间最终状态，并广播已接受的结果。
-- 客户端发送操作意图，不直接决定最终棋盘。
-- 每次服务端接受状态变化后递增 `version`。
-
-## 2. 通用消息字段
-
-```text
- type       消息类型
- requestId  请求标识，可选
- roomId     房间号，可选
- playerId   玩家标识，可选
- version    客户端已知版本，可选
- payload    消息内容
-```
-
-## 3. 房间模式
-
-- `COLLABORATIVE`：两端共同编辑一张棋盘。
-- `COMPETITIVE`：两端各自解题，只同步成绩和完成状态。
-
-第一种用于跨端协作演示，第二种后续实现。
-
-## 4. 第一批消息
-
-| 消息 | 方向 | 作用 |
+| 方法 | 路径 | 用途 |
 | --- | --- | --- |
-| `createRoom` | 客户端 → 服务端 | 创建房间 |
-| `joinRoom` | 客户端 → 服务端 | 加入房间 |
-| `roomState` | 服务端 → 客户端 | 返回完整房间状态 |
-| `cellUpdate` | 双向 | 请求或广播一次落子 |
-| `checkResult` | 双向 | 请求检查并返回错误格 |
-| `restartPuzzle` | 双向 | 请求重启当前题目 |
-| `puzzleCompleted` | 服务端 → 客户端 | 广播完成结果 |
-| `playerJoined` | 服务端 → 客户端 | 通知玩家加入 |
-| `playerLeft` | 服务端 → 客户端 | 通知玩家离开 |
-| `error` | 服务端 → 客户端 | 返回失败原因 |
-| `ping` / `pong` | 双向 | 保持连接和检测断线 |
+| GET | `/health` | 健康检查 |
+| GET | `/games/daily` | 每日挑战 |
+| GET | `/rankings?limit=20` | 排行榜 |
+| POST | `/rankings` | 提交结算 |
 
-## 5. 核心状态
-
-房间状态至少包含：
-
-- `roomId`
-- `roomMode`
-- `puzzleId`
-- `size`
-- 固定格布局
-- 当前玩家棋盘
-- `version`
-- `status`：`WAITING`、`PLAYING`、`COMPLETED`
-- 玩家列表
-
-## 6. 落子规则
-
-客户端发送：
+每日挑战字段：
 
 ```text
-row、col、value、version
+id、size、winLength、board、next、answer、title
 ```
 
-服务端处理：
-
-1. 检查房间和玩家身份；
-2. 检查坐标和固定格；
-3. 按顺序写入状态；
-4. 更新 `version`；
-5. 广播服务端确认后的最新操作或完整状态。
-
-如果版本过旧，返回 `VERSION_CONFLICT` 和最新 `roomState`。
-
-## 7. 错误码建议
+提交排行字段：
 
 ```text
-ROOM_NOT_FOUND
-ROOM_FULL
-INVALID_CELL
-CELL_LOCKED
-INVALID_VALUE
-VERSION_CONFLICT
-PUZZLE_ALREADY_COMPLETED
-INTERNAL_ERROR
+playerId、name、result(WIN/LOSS/DRAW)
 ```
 
-## 8. 后续扩展
+## WebSocket
 
-- 登录后携带认证 token；
-- 断线重连后通过 `roomState` 恢复；
-- 服务端保存房间和历史成绩；
-- 增加独立竞速模式的计时和成绩消息。
+地址：`ws://<host>:9527/ws`
+
+客户端消息：
+
+```text
+hello           playerId、name
+room.create     size、winLength
+room.join       code
+room.state      code（可选）
+move            row、col
+game.surrender
+```
+
+服务端消息：
+
+```text
+connected、hello.ok、room.created、room.state、error
+```
+
+`room.state.room` 至少包含：
+
+```text
+code、size、winLength、board、turn、status、winner、yourMark、players、spectators
+```
+
+状态：`WAITING`、`PLAYING`、`FINISHED`。
+
+## 权威规则
+
+- 服务器校验房间、身份、回合、坐标、占用、胜负和平局。
+- 客户端不得自行宣布网络对局结果。
+- 每次收到 `room.state`，以服务端棋盘覆盖本地房间棋盘。
+
+## 蓝牙
+
+蓝牙复用同一业务消息模型，通过换行分隔 JSON；首版两机 RFCOMM。多机需求优先由 WebSocket 房间满足。
+
+## 联调前补强
+
+Android 当前协议没有 `requestId` 和 `version`。正式跨端联调前升级协议版本，加入房间版本号、幂等请求和断线恢复，避免重复落子与乱序覆盖。
