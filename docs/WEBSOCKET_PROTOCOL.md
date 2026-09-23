@@ -11,7 +11,7 @@
 | GET | `/rankings?limit=20` | 排行榜 |
 | POST | `/rankings` | 提交结算 |
 
-每日挑战字段：
+每日挑战的 `board` 统一使用长度为 `size × size` 的扁平字符串，空格用 `.`。
 
 ```text
 id、size、winLength、board、next、answer、title

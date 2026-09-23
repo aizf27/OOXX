@@ -61,3 +61,10 @@ RoomStatus: WAITING、PLAYING、FINISHED
 2. Android 已有 Compose、HTTP、WebSocket、蓝牙骨架；鸿蒙按相同边界实现。
 3. Android 服务端当前仅两名玩家对战，多人先解释为“玩家 + 观战者”；真正多人玩法需另开规则。
 4. 当前 WS 无版本号；联调前两端和服务端一起升级，不单端私改。
+
+## Android 基线已发现的问题
+
+- `/games/daily`：Android 客户端和 README 要求 `board` 为扁平字符串；服务端当前返回二维数组。统一改为字符串，例如 `"XO..X.O.."`。
+- 好友房页面目前只更新提示文字，尚未把 `WebSocketMatchClient`/蓝牙连接接入 ViewModel 和真实对局。
+- 页面文案写“TCP 房间”，实际实现是标准 WebSocket，应统一写 WebSocket。
+- 因此鸿蒙只对齐 UI、规则和协议，不把 Android 的占位交互当作已完成能力。
