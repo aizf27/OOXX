@@ -17,8 +17,7 @@ android {
         vectorDrawables.useSupportLibrary = true
 
         buildConfigField("String", "GAME_API_BASE_URL", "\"https://example.com/api/\"")
-        buildConfigField("String", "MATCH_HOST", "\"example.com\"")
-        buildConfigField("int", "MATCH_PORT", "9527")
+        buildConfigField("String", "MATCH_WS_URL", "\"ws://example.com:9527/ws\"")
     }
 
     buildFeatures {
