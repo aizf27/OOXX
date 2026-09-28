@@ -21,7 +21,7 @@ import { Context } from '@kit.AbilityKit';
 
 @Entry
 @Component
-struct Index implements MatchStateListener {
+struct Index {
   @State screen: AppScreen = AppScreen.SPLASH;
   @State board: string[] = ['', '', '', '', '', '', '', '', ''];
   @State turnText: string = '轮到你了';

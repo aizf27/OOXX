@@ -65,7 +65,7 @@ export struct RoomPage {
           .width('100%')
           .height(56)
           .fontSize(24)
-          .fontWeight(FontWeight.Black)
+          .fontWeight(FontWeight.Bold)
           .fontColor(this.theme().INK)
           .textAlign(TextAlign.Center)
           .backgroundColor(this.theme().SOFT_GRAY)

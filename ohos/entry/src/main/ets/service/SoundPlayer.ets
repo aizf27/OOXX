@@ -2,7 +2,7 @@ import { audio } from '@kit.AudioKit';
 
 export class SoundPlayer {
   private enabled: boolean = true;
-  private tonePlayer: audio.TonePlayer | null = null;
+  private audioRenderer: audio.AudioRenderer | null = null;
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
@@ -13,10 +13,31 @@ export class SoundPlayer {
       return;
     }
     try {
-      if (this.tonePlayer === null) {
-        this.tonePlayer = audio.createTonePlayer(audio.StreamUsage.STREAM_USAGE_MEDIA);
+      if (this.audioRenderer === null) {
+        const audioStreamInfo: audio.AudioStreamInfo = {
+          samplingRate: audio.AudioSamplingRate.SAMPLE_RATE_44100,
+          channels: audio.AudioChannel.CHANNEL_1,
+          sampleFormat: audio.AudioSampleFormat.SAMPLE_FORMAT_S16LE,
+          encodingType: audio.AudioEncodingType.ENCODING_TYPE_RAW
+        };
+        const audioRendererInfo: audio.AudioRendererInfo = {
+          usage: audio.StreamUsage.STREAM_USAGE_MEDIA,
+          rendererFlags: 0
+        };
+        this.audioRenderer = audio.createAudioRenderer(audioStreamInfo, audioRendererInfo);
       }
-      this.tonePlayer.start(1000, 120);
+      // Generate a simple sine wave tone buffer
+      const sampleRate = 44100;
+      const durationSec = 0.12;
+      const frequency = 1000;
+      const numSamples = Math.floor(sampleRate * durationSec);
+      const buffer = new ArrayBuffer(numSamples * 2);
+      const view = new DataView(buffer);
+      for (let i = 0; i < numSamples; i++) {
+        const sample = Math.sin(2 * Math.PI * frequency * i / sampleRate) * 0.3 * 32767;
+        view.setInt16(i * 2, Math.round(sample), true);
+      }
+      this.audioRenderer.write(buffer);
     } catch {
       // ignore audio errors
     }
@@ -24,11 +45,11 @@ export class SoundPlayer {
 
   release(): void {
     try {
-      this.tonePlayer?.stop();
-      this.tonePlayer?.release();
+      this.audioRenderer?.stop();
+      this.audioRenderer?.release();
     } catch {
       // ignore
     }
-    this.tonePlayer = null;
+    this.audioRenderer = null;
   }
 }

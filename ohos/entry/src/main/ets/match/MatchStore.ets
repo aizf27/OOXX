@@ -3,7 +3,9 @@ import { Mark, Move } from '../model/GameModels';
 import { PreferenceStore } from '../service/PreferenceStore';
 import { MatchConnection } from './MatchTransport';
 import {
+  ConnectedRoomEvent,
   FailureRoomEvent,
+  HelloOkRoomEvent,
   RoomCreatedEvent,
   RoomProtocol,
   RoomSnapshot,
@@ -99,7 +101,7 @@ export class MatchStore {
     if (this.connecting) {
       // 等待当前连接完成
       for (let i = 0; i < 30; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise<void>((resolve) => setTimeout(resolve, 100));
         if (this.connection !== null) {
           return this.connection;
         }
@@ -194,6 +196,8 @@ export class MatchStore {
           null,
           null,
           false,
+          null,
+          [],
           room.opponentName
         );
         this.notifyGameSession(session);
@@ -211,6 +215,8 @@ export class MatchStore {
       null,
       null,
       false,
+      null,
+      [],
       room.opponentName
     );
     this.updateNetwork({

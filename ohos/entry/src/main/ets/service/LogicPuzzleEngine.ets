@@ -1,4 +1,4 @@
-import { Board, Mark } from '../model/GameModels';
+import { Board, Mark, Move } from '../model/GameModels';
 
 export class LogicBoard {
   readonly size: number;
@@ -22,7 +22,7 @@ export class LogicBoard {
     return this.cells[row * this.size + col];
   }
 
-  cycle(move: { row: number, col: number }): LogicBoard {
+  cycle(move: Move): LogicBoard {
     const index = move.row * this.size + move.col;
     if (this.givens.has(index)) {
       return this;

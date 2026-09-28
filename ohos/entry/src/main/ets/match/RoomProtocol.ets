@@ -214,12 +214,16 @@ export class RoomProtocol {
     return JSON.stringify({ type: 'hello', playerId, name });
   }
 
-  static createRoom(size: number = 3, winLength: number = 3): string {
+  static createRoom(size: number = 3, winLength: number = size === 3 ? 3 : 4): string {
     return JSON.stringify({ type: 'room.create', size, winLength });
   }
 
   static joinRoom(code: string): string {
     return JSON.stringify({ type: 'room.join', code });
+  }
+
+  static requestRoomState(code: string): string {
+    return JSON.stringify({ type: 'room.state', code });
   }
 
   static move(row: number, col: number): string {
@@ -232,7 +236,7 @@ export class RoomProtocol {
 
   static decode(text: string): RoomEventUnion | null {
     try {
-      const json = JSON.parse(text);
+      const json: Record<string, Object> = JSON.parse(text);
       const type = json.type as string;
       if (type === 'connected') {
         return RoomEvent.connected(String(json.playerId));
@@ -255,3 +259,4 @@ export class RoomProtocol {
     }
   }
 }
+

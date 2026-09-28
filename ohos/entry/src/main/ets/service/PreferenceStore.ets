@@ -2,6 +2,14 @@ import { preferences } from '@kit.ArkData';
 import { Context } from '@kit.AbilityKit';
 import { MatchRecord, MatchResult, Settings } from '../model/AppModels';
 
+interface MatchRecordPayload {
+  result: string;
+  mode: string;
+  opponent: string;
+  playedAt: number;
+  steps: number;
+}
+
 const PREFERENCES_NAME = 'ooxx_settings';
 const RECORDS_KEY = 'match_records';
 
@@ -63,7 +71,7 @@ export class PreferenceStore {
     }
     try {
       const raw = this.pref.getSync(RECORDS_KEY, '[]') as string;
-      const parsed = JSON.parse(raw) as Array<{ result: string, mode: string, opponent: string, playedAt: number, steps: number }>;
+      const parsed = JSON.parse(raw) as MatchRecordPayload[];
       return parsed.map((item) => new MatchRecord(item.result as MatchResult,
         item.mode, item.opponent, item.playedAt, item.steps));
     } catch {
@@ -75,7 +83,7 @@ export class PreferenceStore {
     if (this.pref === null) {
       return;
     }
-    const payload = records.map((r) => ({
+    const payload = records.map((r): MatchRecordPayload => ({
       result: r.result,
       mode: r.mode,
       opponent: r.opponent,

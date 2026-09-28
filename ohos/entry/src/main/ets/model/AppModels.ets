@@ -1,5 +1,5 @@
-import { Board, LogicBoard } from '../service/LogicPuzzleEngine';
-import { Mark, Move } from './GameModels';
+import { LogicBoard } from '../service/LogicPuzzleEngine';
+import { Board, Mark, Move } from './GameModels';
 
 export enum AppScreen {
   SPLASH = 'SPLASH',
@@ -35,6 +35,21 @@ export enum RoomStatus {
   FINISHED = 'FINISHED'
 }
 
+export interface GameSessionUpdate {
+  board?: Board;
+  turn?: Mark;
+  playerMark?: Mark;
+  kind?: GameKind;
+  moves?: number;
+  message?: string;
+  puzzleAnswer?: Move | null;
+  puzzleSolved?: boolean | null;
+  isAiThinking?: boolean;
+  logicBoard?: LogicBoard | null;
+  logicHistory?: LogicBoard[];
+  opponentName?: string | null;
+}
+
 export class GameSession {
   readonly board: Board;
   readonly turn: Mark;
@@ -67,20 +82,20 @@ export class GameSession {
     this.opponentName = opponentName;
   }
 
-  copy(params: Partial<GameSession> = {}): GameSession {
+  copy(params?: GameSessionUpdate): GameSession {
     return new GameSession(
-      params.board ?? this.board,
-      params.turn ?? this.turn,
-      params.playerMark ?? this.playerMark,
-      params.kind ?? this.kind,
-      params.moves ?? this.moves,
-      params.message ?? this.message,
-      params.puzzleAnswer ?? this.puzzleAnswer,
-      params.puzzleSolved ?? this.puzzleSolved,
-      params.isAiThinking ?? this.isAiThinking,
-      params.logicBoard ?? this.logicBoard,
-      params.logicHistory ?? this.logicHistory,
-      params.opponentName ?? this.opponentName
+      params?.board ?? this.board,
+      params?.turn ?? this.turn,
+      params?.playerMark ?? this.playerMark,
+      params?.kind ?? this.kind,
+      params?.moves ?? this.moves,
+      params?.message ?? this.message,
+      params?.puzzleAnswer ?? this.puzzleAnswer,
+      params?.puzzleSolved ?? this.puzzleSolved,
+      params?.isAiThinking ?? this.isAiThinking,
+      params?.logicBoard ?? this.logicBoard,
+      params?.logicHistory ?? this.logicHistory,
+      params?.opponentName ?? this.opponentName
     );
   }
 }
@@ -124,6 +139,12 @@ export class RankingEntry {
   }
 }
 
+export interface SettingsUpdate {
+  sound?: boolean;
+  vibration?: boolean;
+  darkMode?: boolean;
+}
+
 export class Settings {
   readonly sound: boolean;
   readonly vibration: boolean;
@@ -135,13 +156,21 @@ export class Settings {
     this.darkMode = darkMode;
   }
 
-  copy(params: Partial<Settings> = {}): Settings {
+  copy(params?: SettingsUpdate): Settings {
     return new Settings(
-      params.sound ?? this.sound,
-      params.vibration ?? this.vibration,
-      params.darkMode ?? this.darkMode
+      params?.sound ?? this.sound,
+      params?.vibration ?? this.vibration,
+      params?.darkMode ?? this.darkMode
     );
   }
+}
+
+export interface NetworkRoomUpdate {
+  connecting?: boolean;
+  roomCode?: string;
+  waiting?: boolean;
+  statusMessage?: string;
+  error?: string | null;
 }
 
 export class NetworkRoom {
@@ -160,13 +189,13 @@ export class NetworkRoom {
     this.error = error;
   }
 
-  copy(params: Partial<NetworkRoom> = {}): NetworkRoom {
+  copy(params?: NetworkRoomUpdate): NetworkRoom {
     return new NetworkRoom(
-      params.connecting ?? this.connecting,
-      params.roomCode ?? this.roomCode,
-      params.waiting ?? this.waiting,
-      params.statusMessage ?? this.statusMessage,
-      params.error ?? this.error
+      params?.connecting ?? this.connecting,
+      params?.roomCode ?? this.roomCode,
+      params?.waiting ?? this.waiting,
+      params?.statusMessage ?? this.statusMessage,
+      params?.error ?? this.error
     );
   }
 }

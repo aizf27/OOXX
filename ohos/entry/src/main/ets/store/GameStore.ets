@@ -91,13 +91,13 @@ export class GameStore {
     this.history.push(this.session);
     if (this.session.kind === GameKind.DAILY) {
       const solved = this.session.puzzleAnswer !== null && this.session.puzzleAnswer.equals(move);
-      const board = this.session.board.place(move, this.session.turn);
+      const board: Board = this.session.board.place(move, this.session.turn);
       this.session = this.copySession(board, this.session.turn, 1,
         solved ? '唯一解正确！' : '这一步不是唯一最优解', solved, false);
       await this.finish(solved ? MatchResult.WIN : MatchResult.LOSS);
       return new MoveDecision(MoveHandling.LOCAL_APPLIED, this.session.message);
     }
-    const board = this.session.board.place(move, this.session.turn);
+    const board: Board = this.session.board.place(move, this.session.turn);
     const nextTurn = oppositeMark(this.session.turn);
     const isAi = this.session.kind === GameKind.AI_3X3 || this.session.kind === GameKind.AI_5X5;
     this.session = this.copySession(board, nextTurn, this.session.moves + 1,
@@ -143,7 +143,7 @@ export class GameStore {
         '没有可用落点', null, false);
       return false;
     }
-    const board = this.session.board.place(move, this.session.turn);
+    const board: Board = this.session.board.place(move, this.session.turn);
     this.session = this.copySession(board, oppositeMark(this.session.turn), this.session.moves + 1,
       '轮到你了', null, false);
     await this.completeIfNeeded();
