@@ -35,3 +35,13 @@ id、size、winLength、board、next、answer、title
 - 失败：+2
 
 两端和服务端必须使用同一规则。
+
+## 跨端契约
+
+机器可读规则位于仓库根目录 `contracts/game-rules.v1.json`。
+
+- `version` 是契约版本，Android、鸿蒙和服务端测试必须读取同一版本。
+- `cases` 使用行优先扁平棋盘，`.` 表示空格。
+- `modes` 固定经典模式为 `3×3 / 连 3`，进阶模式为 `5×5 / 连 4`。
+- `scoring` 固定胜、平、负积分为 `30 / 10 / 2`。
+- 修改规则时先更新契约，再同步三端实现和测试。

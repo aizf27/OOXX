@@ -34,6 +34,8 @@ android {
     kotlinOptions.jvmTarget = "17"
 
     packaging.resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+
+    sourceSets.getByName("test").resources.srcDir("../../contracts")
 }
 
 dependencies {

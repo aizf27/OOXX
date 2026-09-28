@@ -5,6 +5,8 @@ export class RoomService {
 
   create(client, { size = 3, winLength = size === 3 ? 3 : 4 } = {}) {
     if (![3, 5].includes(size)) throw new ClientError("UNSUPPORTED_SIZE", "仅支持 3×3 或 5×5 棋盘");
+    const expectedWinLength = size === 3 ? 3 : 4;
+    if (winLength !== expectedWinLength) throw new ClientError("INVALID_WIN_LENGTH", "连线长度与棋盘模式不匹配");
     const room = {
       code: this.nextCode(), size, winLength, board: createBoard(size), turn: "X", status: "WAITING", winner: null,
       players: [{ ...client, mark: "X" }], spectators: [], connections: new Map()

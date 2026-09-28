@@ -65,3 +65,14 @@ code、size、winLength、board、turn、status、winner、yourMark、players、
 ## 联调前补强
 
 Android 当前协议没有 `requestId` 和 `version`。正式跨端联调前升级协议版本，加入房间版本号、幂等请求和断线恢复，避免重复落子与乱序覆盖。
+
+## 跨端契约
+
+机器可读协议位于仓库根目录 `contracts/websocket-protocol.v1.json`。
+
+- `clientMessages` 固定客户端消息的字段与示例。
+- `serverMessages` 固定服务端事件及房间快照结构。
+- `scenario` 是三端共同使用的标准胜局流程。
+- `errorCodes` 是当前服务端允许返回的业务错误码。
+- `room.create` 必须同时携带 `size` 和 `winLength`，且只允许 `3/3` 或 `5/4`。
+- 鸿蒙测试夹具由 `node tools/sync-contract-fixtures.mjs` 生成，禁止手工修改生成文件。

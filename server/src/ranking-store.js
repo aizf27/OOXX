@@ -2,6 +2,12 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 
+export function scoreForResult(result) {
+  if (result === "WIN") return 30;
+  if (result === "DRAW") return 10;
+  if (result === "LOSS") return 2;
+  throw new Error(`未知比赛结果：${result}`);
+}
 export class RankingStore {
   #persistChain = Promise.resolve();
 
@@ -19,9 +25,10 @@ export class RankingStore {
   async applyMatch({ id, name, result }) {
     const entry = this.entries.get(id) ?? { id, name: "匿名玩家", score: 0, wins: 0, losses: 0, draws: 0, updatedAt: 0 };
     entry.name = sanitizeName(name || entry.name);
-    if (result === "WIN") { entry.score += 30; entry.wins += 1; }
-    if (result === "DRAW") { entry.score += 10; entry.draws += 1; }
-    if (result === "LOSS") { entry.score += 2; entry.losses += 1; }
+    entry.score += scoreForResult(result);
+    if (result === "WIN") entry.wins += 1;
+    if (result === "DRAW") entry.draws += 1;
+    if (result === "LOSS") entry.losses += 1;
     entry.updatedAt = Date.now(); this.entries.set(id, entry); await this.persist(); return entry;
   }
   // 并发结算（Promise.all）时串行落盘，避免互相覆盖/竞争同一临时文件

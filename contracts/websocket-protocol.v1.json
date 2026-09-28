@@ -1,0 +1,122 @@
+{
+  "schema": "ooxx.websocket-protocol",
+  "version": 1,
+  "endpoint": "/ws",
+  "clientMessages": [
+    {
+      "id": "hello",
+      "wire": "{\"type\":\"hello\",\"playerId\":\"guest-contract\",\"name\":\"契约玩家\"}"
+    },
+    {
+      "id": "create-classic-room",
+      "wire": "{\"type\":\"room.create\",\"size\":3,\"winLength\":3}"
+    },
+    {
+      "id": "create-advanced-room",
+      "wire": "{\"type\":\"room.create\",\"size\":5,\"winLength\":4}"
+    },
+    {
+      "id": "join-room",
+      "wire": "{\"type\":\"room.join\",\"code\":\"ABC123\"}"
+    },
+    {
+      "id": "request-room-state",
+      "wire": "{\"type\":\"room.state\",\"code\":\"ABC123\"}"
+    },
+    {
+      "id": "move",
+      "wire": "{\"type\":\"move\",\"row\":1,\"col\":2}"
+    },
+    {
+      "id": "surrender",
+      "wire": "{\"type\":\"game.surrender\"}"
+    }
+  ],
+  "serverMessages": [
+    {
+      "id": "connected",
+      "wire": "{\"type\":\"connected\",\"playerId\":\"guest-server\",\"protocol\":1}"
+    },
+    {
+      "id": "hello-ok",
+      "wire": "{\"type\":\"hello.ok\",\"playerId\":\"guest-contract\",\"name\":\"契约玩家\"}"
+    },
+    {
+      "id": "room-created-waiting",
+      "wire": "{\"type\":\"room.created\",\"room\":{\"code\":\"ABC123\",\"size\":3,\"winLength\":3,\"board\":[[\"\",\"\",\"\"],[\"\",\"\",\"\"],[\"\",\"\",\"\"]],\"turn\":\"X\",\"status\":\"WAITING\",\"winner\":null,\"yourMark\":\"X\",\"players\":[{\"id\":\"player-x\",\"name\":\"甲方\",\"mark\":\"X\"}],\"spectators\":[]}}"
+    },
+    {
+      "id": "room-state-playing",
+      "wire": "{\"type\":\"room.state\",\"room\":{\"code\":\"ABC123\",\"size\":3,\"winLength\":3,\"board\":[[\"X\",\"O\",\"\"],[\"\",\"\",\"\"],[\"\",\"\",\"\"]],\"turn\":\"X\",\"status\":\"PLAYING\",\"winner\":null,\"yourMark\":\"X\",\"players\":[{\"id\":\"player-x\",\"name\":\"甲方\",\"mark\":\"X\"},{\"id\":\"player-o\",\"name\":\"乙方\",\"mark\":\"O\"}],\"spectators\":[]}}"
+    },
+    {
+      "id": "room-state-win",
+      "wire": "{\"type\":\"room.state\",\"room\":{\"code\":\"ABC123\",\"size\":3,\"winLength\":3,\"board\":[[\"X\",\"O\",\"\"],[\"X\",\"O\",\"\"],[\"X\",\"\",\"\"]],\"turn\":\"X\",\"status\":\"FINISHED\",\"winner\":\"X\",\"yourMark\":\"X\",\"players\":[{\"id\":\"player-x\",\"name\":\"甲方\",\"mark\":\"X\"},{\"id\":\"player-o\",\"name\":\"乙方\",\"mark\":\"O\"}],\"spectators\":[]}}"
+    },
+    {
+      "id": "room-state-draw",
+      "wire": "{\"type\":\"room.state\",\"room\":{\"code\":\"ABC123\",\"size\":3,\"winLength\":3,\"board\":[[\"X\",\"O\",\"X\"],[\"X\",\"O\",\"O\"],[\"O\",\"X\",\"X\"]],\"turn\":\"X\",\"status\":\"FINISHED\",\"winner\":\"DRAW\",\"yourMark\":\"O\",\"players\":[{\"id\":\"player-x\",\"name\":\"甲方\",\"mark\":\"X\"},{\"id\":\"player-o\",\"name\":\"乙方\",\"mark\":\"O\"}],\"spectators\":[]}}"
+    },
+    {
+      "id": "error",
+      "wire": "{\"type\":\"error\",\"code\":\"NOT_YOUR_TURN\",\"message\":\"还没有轮到你\"}"
+    }
+  ],
+  "scenario": {
+    "size": 3,
+    "winLength": 3,
+    "players": [
+      {
+        "playerId": "contract-x",
+        "name": "甲方",
+        "mark": "X"
+      },
+      {
+        "playerId": "contract-o",
+        "name": "乙方",
+        "mark": "O"
+      }
+    ],
+    "moves": [
+      {
+        "playerId": "contract-x",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "playerId": "contract-o",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "playerId": "contract-x",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "playerId": "contract-o",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "playerId": "contract-x",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "winner": "X"
+  },
+  "errorCodes": [
+    "INVALID_MESSAGE",
+    "UNKNOWN_TYPE",
+    "ROOM_NOT_FOUND",
+    "UNSUPPORTED_SIZE",
+    "INVALID_WIN_LENGTH",
+    "GAME_NOT_READY",
+    "SPECTATOR_READ_ONLY",
+    "NOT_YOUR_TURN",
+    "INVALID_MOVE",
+    "CELL_OCCUPIED",
+    "INVALID_SURRENDER"
+  ]
+}

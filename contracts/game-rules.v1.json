@@ -1,0 +1,100 @@
+{
+  "schema": "ooxx.game-rules",
+  "version": 1,
+  "boardEncoding": {
+    "order": "row-major",
+    "empty": ".",
+    "marks": ["X", "O"]
+  },
+  "modes": [
+    { "id": "classic-3x3", "size": 3, "winLength": 3 },
+    { "id": "advanced-5x5", "size": 5, "winLength": 4 }
+  ],
+  "scoring": {
+    "WIN": 30,
+    "DRAW": 10,
+    "LOSS": 2
+  },
+  "cases": [
+    {
+      "id": "classic-row-x",
+      "size": 3,
+      "winLength": 3,
+      "board": "XXXOO....",
+      "winner": "X",
+      "draw": false
+    },
+    {
+      "id": "classic-column-o",
+      "size": 3,
+      "winLength": 3,
+      "board": "XO.XO..OX",
+      "winner": "O",
+      "draw": false
+    },
+    {
+      "id": "classic-diagonal-x",
+      "size": 3,
+      "winLength": 3,
+      "board": "XOO.X...X",
+      "winner": "X",
+      "draw": false
+    },
+    {
+      "id": "classic-anti-diagonal-o",
+      "size": 3,
+      "winLength": 3,
+      "board": "XXO.O.O.X",
+      "winner": "O",
+      "draw": false
+    },
+    {
+      "id": "classic-draw",
+      "size": 3,
+      "winLength": 3,
+      "board": "XOXXOOOXX",
+      "winner": null,
+      "draw": true
+    },
+    {
+      "id": "classic-ongoing",
+      "size": 3,
+      "winLength": 3,
+      "board": "XO..X.O..",
+      "winner": null,
+      "draw": false
+    },
+    {
+      "id": "advanced-row-x",
+      "size": 5,
+      "winLength": 4,
+      "board": "XXXXOOO..................",
+      "winner": "X",
+      "draw": false
+    },
+    {
+      "id": "advanced-column-o",
+      "size": 5,
+      "winLength": 4,
+      "board": "X...O.X..O..X.O....O.....",
+      "winner": "O",
+      "draw": false
+    },
+    {
+      "id": "advanced-diagonal-x",
+      "size": 5,
+      "winLength": 4,
+      "board": "X.....X.....X.....X.....O",
+      "winner": "X",
+      "draw": false
+    },
+    {
+      "id": "advanced-anti-diagonal-o",
+      "size": 5,
+      "winLength": 4,
+      "board": "X..O..XO...O...O........X",
+      "winner": "O",
+      "draw": false
+    }
+  ]
+}

@@ -48,12 +48,16 @@ object RoomProtocol {
         mapOf("type" to "hello", "playerId" to playerId, "name" to name)
     ).toString()
 
-    fun createRoom(size: Int = 3): String = JSONObject(
-        mapOf("type" to "room.create", "size" to size)
+    fun createRoom(size: Int = 3, winLength: Int = if (size == 3) 3 else 4): String = JSONObject(
+        mapOf("type" to "room.create", "size" to size, "winLength" to winLength)
     ).toString()
 
     fun joinRoom(code: String): String = JSONObject(
         mapOf("type" to "room.join", "code" to code)
+    ).toString()
+
+    fun requestRoomState(code: String): String = JSONObject(
+        mapOf("type" to "room.state", "code" to code)
     ).toString()
 
     fun move(row: Int, col: Int): String = JSONObject(

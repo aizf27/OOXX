@@ -27,3 +27,10 @@
 | `ohos/**` | 鸿蒙开发 |
 | `server/**` | 服务端开发 |
 | `docs/**` | 双方共同确认 |
+
+## 契约修改流程
+
+1. 修改根目录 `contracts/*.json`。
+2. 执行 `node tools/sync-contract-fixtures.mjs` 同步鸿蒙夹具。
+3. 分别运行 Android、鸿蒙和服务端契约测试。
+4. 执行 `node tools/sync-contract-fixtures.mjs --check` 确认生成文件没有漂移。

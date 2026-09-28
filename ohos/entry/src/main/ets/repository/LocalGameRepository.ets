@@ -4,6 +4,15 @@ import { PreferenceStore } from '../service/PreferenceStore';
 import { GameEngine } from '../service/GameEngine';
 import { PuzzleRepository, RecordRepository } from './GameRepository';
 
+export function scoreForResult(result: MatchResult): number {
+  if (result === MatchResult.WIN) {
+    return 30;
+  }
+  if (result === MatchResult.DRAW) {
+    return 10;
+  }
+  return 2;
+}
 export interface RecordDataSource {
   load(): Promise<MatchRecord[]>;
   replace(records: MatchRecord[]): Promise<void>;
@@ -67,14 +76,12 @@ export class LocalGameRepository implements PuzzleRepository, RecordRepository {
     let draws = 0;
     for (let index = 0; index < records.length; index++) {
       const result = records[index].result;
+      score += scoreForResult(result);
       if (result === MatchResult.WIN) {
-        score += 30;
         wins++;
       } else if (result === MatchResult.DRAW) {
-        score += 10;
         draws++;
       } else {
-        score += 2;
         losses++;
       }
     }

@@ -17,6 +17,14 @@ import java.util.concurrent.TimeUnit
 
 enum class MatchResult { WIN, LOSS, DRAW }
 
+object MatchScore {
+    fun points(result: MatchResult): Int = when (result) {
+        MatchResult.WIN -> 30
+        MatchResult.DRAW -> 10
+        MatchResult.LOSS -> 2
+    }
+}
+
 data class MatchRecord(
     val result: MatchResult,
     val mode: String,
@@ -51,13 +59,7 @@ class LocalGameRepository(context: Context) {
     }.sortedByDescending { it.playedAt }
 
     fun ranking(): List<RankingEntry> {
-        val score = records().fold(0) { total, record ->
-            total + when (record.result) {
-                MatchResult.WIN -> 30
-                MatchResult.DRAW -> 10
-                MatchResult.LOSS -> 2
-            }
-        }
+        val score = records().sumOf { MatchScore.points(it.result) }
         val players = listOf(
             RankingEntry(1, "棋妙高手", 1280),
             RankingEntry(2, "圈圈达人", 1160),

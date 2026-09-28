@@ -3,6 +3,7 @@ import gameEngineTest from './GameEngine.test';
 import puzzleValidatorTest from './PuzzleValidator.test';
 import localGameRepositoryTest from './LocalGameRepository.test';
 import gameStoreTest from './GameStore.test';
+import crossPlatformContractTest from './CrossPlatformContract.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -10,4 +11,5 @@ export default function testsuite() {
   puzzleValidatorTest();
   localGameRepositoryTest();
   gameStoreTest();
+  crossPlatformContractTest();
 }

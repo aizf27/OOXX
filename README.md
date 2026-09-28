@@ -10,7 +10,8 @@
 | `ohos/` | ArkTS + ArkUI 客户端 |
 | `server/` | Node.js HTTP/WebSocket 服务端 |
 | `design/` | UI 原型与视觉资料 |
-| `docs/` | 跨端规则、协议与协作约定 |
+| docs/ | 跨端规则、协议与协作约定 |
+| contracts/ | Android、鸿蒙与服务端共用的机器可读契约 |
 
 ## 打开与运行
 

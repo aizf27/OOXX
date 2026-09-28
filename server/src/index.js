@@ -9,7 +9,8 @@ import { ClientError, RoomService } from "./room-service.js";
 const port = Number(process.env.PORT ?? 9527);
 const hostname = process.env.HOST ?? "0.0.0.0";
 const root = dirname(fileURLToPath(import.meta.url));
-const rankings = new RankingStore(join(root, "..", "data", "rankings.json"));
+const rankingsFile = process.env.RANKINGS_FILE ?? join(root, "..", "data", "rankings.json");
+const rankings = new RankingStore(rankingsFile);
 await rankings.load();
 const rooms = new RoomService(rankings);
 
@@ -83,4 +84,8 @@ function readJson(request) {
     request.on("error", reject);
   });
 }
-server.listen(port, hostname, () => console.log(`OOXX server: http://${hostname}:${port} | ws://${hostname}:${port}/ws`));
+server.listen(port, hostname, () => {
+  const address = server.address();
+  const actualPort = typeof address === "object" && address ? address.port : port;
+  console.log(`OOXX server: http://${hostname}:${actualPort} | ws://${hostname}:${actualPort}/ws`);
+});
