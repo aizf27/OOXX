@@ -1,11 +1,16 @@
-import { OoxxColors } from '../theme/OoxxTheme';
+import { OoxxTheme } from '../theme/OoxxTheme';
 
 @Component
 export struct OoxxCharacter {
+  @StorageProp('isDarkMode') isDarkMode: boolean = false;
   @Prop kind: string = 'O';
   @Prop charSize: number = 74;
-  @Prop accent: string = OoxxColors.CORAL;
+  @Prop accent: string = OoxxTheme.light.CORAL;
   @Prop label: string = '';
+
+  theme(): OoxxTheme {
+    return OoxxTheme.current(this.isDarkMode);
+  }
 
   build() {
     Column({ space: 4 }) {
@@ -16,14 +21,14 @@ export struct OoxxCharacter {
           .textAlign(TextAlign.Center)
           .fontSize(this.charSize * 0.52)
           .fontWeight(FontWeight.Bold)
-          .fontColor(this.kind === 'O' ? OoxxColors.INK : OoxxColors.WHITE)
+          .fontColor(this.kind === 'O' ? this.theme().INK : this.theme().WHITE)
           .backgroundColor(this.accent)
           .borderRadius(this.charSize / 2)
-          .border({ width: 3, color: OoxxColors.INK })
+          .border({ width: 3, color: this.theme().INK })
         if (this.kind === 'O') {
           Text('•  •')
             .fontSize(this.charSize * 0.18)
-            .fontColor(OoxxColors.INK)
+            .fontColor(this.theme().INK)
             .margin({ top: -this.charSize * 0.08 })
         }
       }
@@ -31,7 +36,7 @@ export struct OoxxCharacter {
         Text(this.label)
           .fontSize(13)
           .fontWeight(FontWeight.Medium)
-          .fontColor(OoxxColors.INK)
+          .fontColor(this.theme().INK)
       }
     }
   }

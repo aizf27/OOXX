@@ -1,12 +1,17 @@
-import { OoxxColors } from '../theme/OoxxTheme';
+import { OoxxTheme } from '../theme/OoxxTheme';
 
 @Component
 export struct OoxxTopBar {
+  @StorageProp('isDarkMode') isDarkMode: boolean = false;
   @Prop title: string = '';
   @Prop showBack: boolean = false;
   @Prop actionIcon: string = '';
   onBack: () => void = () => {};
   onAction: () => void = () => {};
+
+  theme(): OoxxTheme {
+    return OoxxTheme.current(this.isDarkMode);
+  }
 
   build() {
     Row() {
@@ -14,7 +19,7 @@ export struct OoxxTopBar {
         Text('‹')
           .width(32)
           .fontSize(34)
-          .fontColor(OoxxColors.INK)
+          .fontColor(this.theme().INK)
           .onClick(() => this.onBack())
       } else {
         Text('').width(32)
@@ -23,14 +28,14 @@ export struct OoxxTopBar {
       Text(this.title)
         .fontSize(22)
         .fontWeight(FontWeight.Bold)
-        .fontColor(OoxxColors.INK)
+        .fontColor(this.theme().INK)
       Blank()
       if (this.actionIcon.length > 0) {
         Text(this.actionIcon)
           .width(32)
           .fontSize(24)
           .textAlign(TextAlign.Center)
-          .fontColor(OoxxColors.INK)
+          .fontColor(this.theme().INK)
           .onClick(() => this.onAction())
       } else {
         Text('').width(32)

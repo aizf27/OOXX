@@ -2,15 +2,20 @@ import { OoxxCharacter } from '../components/OoxxCharacter';
 import { OoxxTopBar } from '../components/OoxxTopBar';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { NetworkRoom } from '../model/AppModels';
-import { OoxxColors, OoxxRadius, OoxxSpacing } from '../theme/OoxxTheme';
+import { OoxxRadius, OoxxSpacing, OoxxTheme } from '../theme/OoxxTheme';
 
 @Component
 export struct RoomPage {
+  @StorageProp('isDarkMode') isDarkMode: boolean = false;
   @Prop network: NetworkRoom = new NetworkRoom();
   @State code: string = '';
   onBack: () => void = () => {};
   onCreate: () => void = () => {};
   onJoin: (code: string) => void = () => {};
+
+  theme(): OoxxTheme {
+    return OoxxTheme.current(this.isDarkMode);
+  }
 
   normalizedCode(): string {
     return this.code
@@ -28,12 +33,12 @@ export struct RoomPage {
       Text('和朋友一起玩，更有趣！')
         .fontSize(18)
         .fontWeight(FontWeight.Medium)
-        .fontColor(OoxxColors.INK)
+        .fontColor(this.theme().INK)
         .margin({ bottom: 18 })
       Row({ space: 38 }) {
-        OoxxCharacter({ kind: 'O', charSize: 76, accent: OoxxColors.SKY, label: '康思' })
-        Text('VS').fontSize(16).fontWeight(FontWeight.Bold).fontColor(OoxxColors.MUTED)
-        OoxxCharacter({ kind: 'X', charSize: 76, accent: OoxxColors.CORAL, label: '好友' })
+        OoxxCharacter({ kind: 'O', charSize: 76, accent: this.theme().SKY, label: '康思' })
+        Text('VS').fontSize(16).fontWeight(FontWeight.Bold).fontColor(this.theme().MUTED)
+        OoxxCharacter({ kind: 'X', charSize: 76, accent: this.theme().CORAL, label: '好友' })
       }
       .justifyContent(FlexAlign.Center)
       .width('100%')
@@ -43,16 +48,17 @@ export struct RoomPage {
         .height(52)
         .width('100%')
         .fontSize(16)
-        .fontColor(OoxxColors.INK)
-        .backgroundColor(OoxxColors.WHITE)
+        .fontColor(this.theme().INK)
+        .placeholderColor(this.theme().MUTED)
+        .backgroundColor(this.theme().WHITE)
         .borderRadius(OoxxRadius.BUTTON)
-        .border({ width: 1, color: OoxxColors.LINE })
+        .border({ width: 1, color: this.theme().LINE })
         .onChange((value: string) => this.code = value)
         .margin({ bottom: 14 })
 
-      PrimaryButton({ label: '创建房间', color: OoxxColors.CORAL, onTap: () => this.onCreate() })
+      PrimaryButton({ label: '创建房间', color: this.theme().CORAL, onTap: () => this.onCreate() })
         .margin({ bottom: 12 })
-      PrimaryButton({ label: '加入房间', color: OoxxColors.TEAL, onTap: () => this.onJoin(this.normalizedCode()) })
+      PrimaryButton({ label: '加入房间', color: this.theme().TEAL, onTap: () => this.onJoin(this.normalizedCode()) })
 
       if (this.network.roomCode.length > 0 && this.network.waiting) {
         Text(`房间码 ${this.network.roomCode}`)
@@ -60,9 +66,9 @@ export struct RoomPage {
           .height(56)
           .fontSize(24)
           .fontWeight(FontWeight.Black)
-          .fontColor(OoxxColors.INK)
+          .fontColor(this.theme().INK)
           .textAlign(TextAlign.Center)
-          .backgroundColor(OoxxColors.SOFT_GRAY)
+          .backgroundColor(this.theme().SOFT_GRAY)
           .borderRadius(OoxxRadius.CARD)
           .margin({ top: 16 })
       }
@@ -70,7 +76,7 @@ export struct RoomPage {
       if (this.network.connecting) {
         Text('连接中…')
           .fontSize(14)
-          .fontColor(OoxxColors.MUTED)
+          .fontColor(this.theme().MUTED)
           .textAlign(TextAlign.Center)
           .width('100%')
           .margin({ top: 16 })
@@ -79,7 +85,7 @@ export struct RoomPage {
       if (this.network.error !== null && this.network.error.length > 0) {
         Text(this.network.error)
           .fontSize(14)
-          .fontColor(OoxxColors.DANGER)
+          .fontColor(this.theme().DANGER)
           .textAlign(TextAlign.Center)
           .width('100%')
           .margin({ top: 16 })
@@ -87,7 +93,7 @@ export struct RoomPage {
         !(this.network.roomCode.length > 0 && this.network.waiting)) {
         Text(this.network.statusMessage)
           .fontSize(14)
-          .fontColor(OoxxColors.MUTED)
+          .fontColor(this.theme().MUTED)
           .textAlign(TextAlign.Center)
           .width('100%')
           .margin({ top: 16 })
@@ -96,7 +102,7 @@ export struct RoomPage {
       Blank()
       Text('联网后由 WebSocket 房间接管状态，客户端只发送操作。')
         .fontSize(13)
-        .fontColor(OoxxColors.MUTED)
+        .fontColor(this.theme().MUTED)
         .textAlign(TextAlign.Center)
         .width('100%')
         .padding({ bottom: OoxxSpacing.PAGE })
@@ -104,6 +110,6 @@ export struct RoomPage {
     .width('100%')
     .height('100%')
     .padding({ left: OoxxSpacing.PAGE, right: OoxxSpacing.PAGE })
-    .backgroundColor(OoxxColors.PAPER)
+    .backgroundColor(this.theme().PAPER)
   }
 }

@@ -1,12 +1,17 @@
-import { OoxxColors, OoxxRadius } from '../theme/OoxxTheme';
+import { OoxxRadius, OoxxTheme } from '../theme/OoxxTheme';
 
 @Component
 export struct HomeModeCard {
+  @StorageProp('isDarkMode') isDarkMode: boolean = false;
   @Prop icon: string = '';
   @Prop title: string = '';
   @Prop subtitle: string = '';
-  @Prop color: string = OoxxColors.SUNNY_SOFT;
+  @Prop color: string = OoxxTheme.light.SUNNY_SOFT;
   onTap: () => void = () => {};
+
+  theme(): OoxxTheme {
+    return OoxxTheme.current(this.isDarkMode);
+  }
 
   build() {
     Column({ space: 8 }) {
@@ -15,15 +20,15 @@ export struct HomeModeCard {
         .height(46)
         .textAlign(TextAlign.Center)
         .fontSize(28)
-        .fontColor(OoxxColors.INK)
-        .backgroundColor(OoxxColors.WHITE)
+        .fontColor(this.theme().INK)
+        .backgroundColor(this.theme().WHITE)
         .borderRadius(23)
       Text(this.title)
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
-        .fontColor(OoxxColors.INK)
+        .fontColor(this.theme().INK)
       if (this.subtitle.length > 0) {
-        Text(this.subtitle).fontSize(11).fontColor(OoxxColors.MUTED)
+        Text(this.subtitle).fontSize(11).fontColor(this.theme().MUTED)
       }
     }
     .width('48%')
@@ -31,7 +36,7 @@ export struct HomeModeCard {
     .justifyContent(FlexAlign.Center)
     .backgroundColor(this.color)
     .borderRadius(OoxxRadius.CARD)
-    .border({ width: 1, color: OoxxColors.LINE })
+    .border({ width: 1, color: this.theme().LINE })
     .onClick(() => this.onTap())
   }
 }

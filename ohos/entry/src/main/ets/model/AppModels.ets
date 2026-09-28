@@ -1,4 +1,5 @@
-import { Board, Mark, Move } from './GameModels';
+import { Board, LogicBoard } from '../service/LogicPuzzleEngine';
+import { Mark, Move } from './GameModels';
 
 export enum AppScreen {
   SPLASH = 'SPLASH',
@@ -15,6 +16,7 @@ export enum AppScreen {
 export enum GameKind {
   AI_3X3 = 'AI_3X3',
   AI_5X5 = 'AI_5X5',
+  LOGIC_6X6 = 'LOGIC_6X6',
   LOCAL = 'LOCAL',
   DAILY = 'DAILY',
   NETWORK = 'NETWORK',
@@ -43,12 +45,14 @@ export class GameSession {
   readonly puzzleAnswer: Move | null;
   readonly puzzleSolved: boolean | null;
   readonly isAiThinking: boolean;
+  readonly logicBoard: LogicBoard | null;
+  readonly logicHistory: LogicBoard[];
   readonly opponentName: string | null;
 
   constructor(board: Board = new Board(), turn: Mark = Mark.X, playerMark: Mark = Mark.X,
     kind: GameKind = GameKind.AI_3X3, moves: number = 0, message: string = '轮到你了',
-    puzzleAnswer: Move | null = null, puzzleSolved: boolean | null = null,
-    isAiThinking: boolean = false, opponentName: string | null = null) {
+    puzzleAnswer: Move | null = null, puzzleSolved: boolean | null = null, isAiThinking: boolean = false,
+    logicBoard: LogicBoard | null = null, logicHistory: LogicBoard[] = [], opponentName: string | null = null) {
     this.board = board;
     this.turn = turn;
     this.playerMark = playerMark;
@@ -58,6 +62,8 @@ export class GameSession {
     this.puzzleAnswer = puzzleAnswer;
     this.puzzleSolved = puzzleSolved;
     this.isAiThinking = isAiThinking;
+    this.logicBoard = logicBoard;
+    this.logicHistory = logicHistory;
     this.opponentName = opponentName;
   }
 
@@ -72,6 +78,8 @@ export class GameSession {
       params.puzzleAnswer ?? this.puzzleAnswer,
       params.puzzleSolved ?? this.puzzleSolved,
       params.isAiThinking ?? this.isAiThinking,
+      params.logicBoard ?? this.logicBoard,
+      params.logicHistory ?? this.logicHistory,
       params.opponentName ?? this.opponentName
     );
   }

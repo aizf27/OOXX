@@ -2,6 +2,7 @@ import { GameKind, GameSession, MatchRecord, MatchResult, Settings } from '../mo
 import { Board, Mark, Move, oppositeMark, Puzzle } from '../model/GameModels';
 import { RecordRepository } from '../repository/GameRepository';
 import { GameEngine } from '../service/GameEngine';
+import { LogicBoard, LogicPuzzleEngine } from '../service/LogicPuzzleEngine';
 
 export enum MoveHandling {
   LOCAL_APPLIED = 'LOCAL_APPLIED',
@@ -53,6 +54,12 @@ export class GameStore {
       this.session = new GameSession(new Board(5, 4), Mark.X, Mark.X, kind);
       return;
     }
+    if (kind === GameKind.LOGIC_6X6) {
+      const logic = LogicPuzzleEngine.classic6x6();
+      this.session = new GameSession(new Board(), Mark.X, Mark.X, kind, 0,
+        LogicPuzzleEngine.status(logic), null, null, false, logic, []);
+      return;
+    }
     if (kind === GameKind.DAILY) {
       const daily = puzzle ?? this.engine.fallbackPuzzle();
       this.session = new GameSession(daily.board, daily.next, daily.next, kind, 0,
@@ -71,6 +78,9 @@ export class GameStore {
   async play(move: Move): Promise<MoveDecision> {
     if (this.session.kind === GameKind.NETWORK || this.session.kind === GameKind.BLUETOOTH) {
       return new MoveDecision(MoveHandling.REMOTE_REQUIRED, '落子需由连接层发送并等待权威状态');
+    }
+    if (this.session.kind === GameKind.LOGIC_6X6) {
+      return this.playLogicMove(move);
     }
     if (this.result !== null || this.session.isAiThinking || !this.session.board.isEmpty(move)) {
       return new MoveDecision(MoveHandling.REJECTED, '当前不能在此处落子');
@@ -98,6 +108,31 @@ export class GameStore {
     return new MoveDecision(MoveHandling.LOCAL_APPLIED, this.session.message);
   }
 
+  private playLogicMove(move: Move): MoveDecision {
+    const current = this.session.logicBoard;
+    if (current === null || this.result !== null) {
+      return new MoveDecision(MoveHandling.REJECTED, '当前不能在此处落子');
+    }
+    const next = current.cycle(move);
+    if (next === current) {
+      return new MoveDecision(MoveHandling.REJECTED, '题面不可修改');
+    }
+    this.history.push(this.session);
+    const updated = this.session.copy({
+      logicBoard: next,
+      logicHistory: this.session.logicHistory.concat([current]),
+      moves: this.session.moves + 1,
+      message: LogicPuzzleEngine.status(next)
+    });
+    this.session = updated;
+    if (LogicPuzzleEngine.isSolved(next)) {
+      this.finish(MatchResult.WIN).catch(() => {
+        // ignore
+      });
+    }
+    return new MoveDecision(MoveHandling.LOCAL_APPLIED, this.session.message);
+  }
+
   async playAiTurn(): Promise<boolean> {
     if (!this.session.isAiThinking || this.result !== null) {
       return false;
@@ -119,6 +154,19 @@ export class GameStore {
     if (this.result !== null || this.session.isAiThinking || this.session.kind === GameKind.DAILY ||
       this.session.kind === GameKind.NETWORK || this.session.kind === GameKind.BLUETOOTH || this.history.length === 0) {
       return false;
+    }
+    if (this.session.kind === GameKind.LOGIC_6X6) {
+      const previous = this.session.logicHistory[this.session.logicHistory.length - 1];
+      if (previous === undefined) {
+        return false;
+      }
+      this.session = this.session.copy({
+        logicBoard: previous,
+        logicHistory: this.session.logicHistory.slice(0, -1),
+        moves: Math.max(0, this.session.moves - 1),
+        message: LogicPuzzleEngine.status(previous)
+      });
+      return true;
     }
     const previous = this.history.pop();
     if (previous === undefined) {
@@ -152,7 +200,7 @@ export class GameStore {
   private copySession(board: Board, turn: Mark, moves: number, message: string,
     puzzleSolved: boolean | null, isAiThinking: boolean): GameSession {
     return new GameSession(board, turn, this.session.playerMark, this.session.kind, moves, message,
-      this.session.puzzleAnswer, puzzleSolved, isAiThinking);
+      this.session.puzzleAnswer, puzzleSolved, isAiThinking, this.session.logicBoard, this.session.logicHistory);
   }
 
   private async completeIfNeeded(): Promise<boolean> {
@@ -188,6 +236,9 @@ export class GameStore {
     if (this.session.kind === GameKind.AI_5X5) {
       return '进阶 5×5';
     }
+    if (this.session.kind === GameKind.LOGIC_6X6) {
+      return '逻辑 OOXX 6×6';
+    }
     if (this.session.kind === GameKind.LOCAL) {
       return '双人同屏';
     }
@@ -210,8 +261,8 @@ export class GameStore {
     if (this.session.kind === GameKind.NETWORK || this.session.kind === GameKind.BLUETOOTH) {
       return this.session.opponentName ?? '在线玩家';
     }
-    if (this.session.kind === GameKind.DAILY) {
-      return '每日题目';
+    if (this.session.kind === GameKind.DAILY || this.session.kind === GameKind.LOGIC_6X6) {
+      return '逻辑谜题';
     }
     return 'AI 棋手';
   }

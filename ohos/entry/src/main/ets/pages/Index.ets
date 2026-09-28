@@ -14,6 +14,7 @@ import { GameStore, MoveHandling } from '../store/GameStore';
 import { PreferenceStore } from '../service/PreferenceStore';
 import { MatchStore, MatchStateListener } from '../match/MatchStore';
 import { DailyClient } from '../network/DailyClient';
+import { SoundPlayer } from '../service/SoundPlayer';
 import { vibrator } from '@kit.SensorServiceKit';
 import { promptAction } from '@kit.ArkUI';
 import { Context } from '@kit.AbilityKit';
@@ -32,6 +33,7 @@ struct Index implements MatchStateListener {
   private readonly gameStore: GameStore = new GameStore(new LocalGameRepository());
   private readonly matchStore: MatchStore = new MatchStore();
   private readonly dailyClient: DailyClient = new DailyClient();
+  private readonly soundPlayer: SoundPlayer = new SoundPlayer();
   private context: Context | null = null;
 
   aboutToAppear(): void {
@@ -42,6 +44,8 @@ struct Index implements MatchStateListener {
       const loaded = PreferenceStore.getInstance().loadSettings();
       this.settings = loaded;
       this.gameStore.setSettings(loaded);
+      this.soundPlayer.setEnabled(loaded.sound);
+      AppStorage.setOrCreate('isDarkMode', loaded.darkMode);
     }).catch(() => {
       // ignore
     });
@@ -55,6 +59,7 @@ struct Index implements MatchStateListener {
   aboutToDisappear(): void {
     this.matchStore.close();
     this.matchStore.setListener(null);
+    this.soundPlayer.release();
   }
 
   showHome(): void {
@@ -154,6 +159,7 @@ struct Index implements MatchStateListener {
   setSound(enabled: boolean): void {
     this.settings = this.settings.copy({ sound: enabled });
     this.gameStore.setSettings(this.settings);
+    this.soundPlayer.setEnabled(enabled);
     this.saveSettings();
   }
 
@@ -166,6 +172,7 @@ struct Index implements MatchStateListener {
   setDarkMode(enabled: boolean): void {
     this.settings = this.settings.copy({ darkMode: enabled });
     this.gameStore.setSettings(this.settings);
+    AppStorage.setOrCreate('isDarkMode', enabled);
     this.saveSettings();
   }
 
@@ -178,6 +185,9 @@ struct Index implements MatchStateListener {
   gameModeText(): string {
     if (this.currentKind === GameKind.AI_5X5) {
       return '进阶 5×5';
+    }
+    if (this.currentKind === GameKind.LOGIC_6X6) {
+      return '逻辑 OOXX 6×6';
     }
     if (this.currentKind === GameKind.LOCAL) {
       return '双人同屏';
@@ -196,6 +206,16 @@ struct Index implements MatchStateListener {
 
   syncGameState(): void {
     const session = this.gameStore.session;
+    if (session.kind === GameKind.LOGIC_6X6 && session.logicBoard !== null) {
+      this.boardSize = session.logicBoard.size;
+      const cells: string[] = [];
+      for (let index = 0; index < session.logicBoard.cells.length; index++) {
+        cells.push(session.logicBoard.cells[index] === Mark.EMPTY ? '' : session.logicBoard.cells[index]);
+      }
+      this.board = cells;
+      this.turnText = session.message;
+      return;
+    }
     this.boardSize = session.board.size;
     const cells: string[] = [];
     for (let index = 0; index < session.board.cells.length; index++) {
@@ -226,6 +246,9 @@ struct Index implements MatchStateListener {
   }
 
   private tapFeedback(): void {
+    if (this.settings.sound) {
+      this.soundPlayer.beep();
+    }
     if (this.settings.vibration) {
       try {
         vibrator.startVibration({ type: 'time', duration: 30 }, { usage: 'touch' });
@@ -263,7 +286,8 @@ struct Index implements MatchStateListener {
           onBack: () => this.showHome(),
           onStartClassic: () => this.startGame(GameKind.AI_3X3),
           onStartAdvanced: () => this.startGame(GameKind.AI_5X5),
-          onStartDaily: () => this.startGame(GameKind.DAILY)
+          onStartDaily: () => this.startGame(GameKind.DAILY),
+          onStartLogic: () => this.startGame(GameKind.LOGIC_6X6)
         })
       } else if (this.screen === AppScreen.ROOM) {
         RoomPage({
@@ -278,6 +302,7 @@ struct Index implements MatchStateListener {
           playerTurn: this.turnText,
           isLocal: this.currentKind === GameKind.LOCAL,
           isNetwork: this.currentKind === GameKind.NETWORK,
+          isLogic: this.currentKind === GameKind.LOGIC_6X6,
           kind: this.currentKind,
           onBack: () => this.showHome(),
           onTapCell: (index: number) => this.tapCell(index),
@@ -310,6 +335,5 @@ struct Index implements MatchStateListener {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(this.settings.darkMode ? '#201F1C' : '#FFFDF6')
   }
 }

@@ -1,5 +1,6 @@
 import { MatchRecord, MatchResult, RankingEntry } from '../model/AppModels';
 import { Puzzle } from '../model/GameModels';
+import { PreferenceStore } from '../service/PreferenceStore';
 import { GameEngine } from '../service/GameEngine';
 import { PuzzleRepository, RecordRepository } from './GameRepository';
 
@@ -20,11 +21,21 @@ export class MemoryRecordDataSource implements RecordDataSource {
   }
 }
 
+export class PreferenceRecordDataSource implements RecordDataSource {
+  async load(): Promise<MatchRecord[]> {
+    return PreferenceStore.getInstance().loadRecords();
+  }
+
+  async replace(records: MatchRecord[]): Promise<void> {
+    await PreferenceStore.getInstance().saveRecords(records);
+  }
+}
+
 export class LocalGameRepository implements PuzzleRepository, RecordRepository {
   private readonly source: RecordDataSource;
   private readonly engine: GameEngine;
 
-  constructor(source: RecordDataSource = new MemoryRecordDataSource(), engine: GameEngine = new GameEngine()) {
+  constructor(source: RecordDataSource = new PreferenceRecordDataSource(), engine: GameEngine = new GameEngine()) {
     this.source = source;
     this.engine = engine;
   }

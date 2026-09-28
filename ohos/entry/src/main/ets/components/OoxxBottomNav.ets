@@ -1,14 +1,19 @@
-import { OoxxColors, OoxxRadius } from '../theme/OoxxTheme';
+import { OoxxRadius, OoxxTheme } from '../theme/OoxxTheme';
 
 @Component
 export struct OoxxBottomNav {
+  @StorageProp('isDarkMode') isDarkMode: boolean = false;
   @Prop selected: string = 'home';
   onHome: () => void = () => {};
   onHistory: () => void = () => {};
   onProfile: () => void = () => {};
 
+  theme(): OoxxTheme {
+    return OoxxTheme.current(this.isDarkMode);
+  }
+
   itemColor(key: string): string {
-    return this.selected === key ? OoxxColors.CORAL : OoxxColors.MUTED;
+    return this.selected === key ? this.theme().CORAL : this.theme().MUTED;
   }
 
   build() {
@@ -29,8 +34,8 @@ export struct OoxxBottomNav {
     .width('100%')
     .height(66)
     .padding({ top: 8 })
-    .backgroundColor(OoxxColors.PAPER)
-    .border({ width: { top: 1 }, color: OoxxColors.LINE })
+    .backgroundColor(this.theme().PAPER)
+    .border({ width: { top: 1 }, color: this.theme().LINE })
     .borderRadius(OoxxRadius.CARD)
   }
 }
