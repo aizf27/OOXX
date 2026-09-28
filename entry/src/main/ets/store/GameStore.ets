@@ -46,7 +46,12 @@ export class GameStore {
         '请选择唯一最优的一步', daily.answer);
       return;
     }
-    const message = kind === GameKind.NETWORK || kind === GameKind.BLUETOOTH ? '等待跨端连接' : '轮到你了';
+    let message = '轮到你了';
+    if (kind === GameKind.NETWORK || kind === GameKind.BLUETOOTH) {
+      message = '等待跨端连接';
+    } else if (kind === GameKind.LOCAL) {
+      message = '轮到 X';
+    }
     this.session = new GameSession(new Board(), Mark.X, Mark.X, kind, 0, message);
   }
 

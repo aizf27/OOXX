@@ -1,6 +1,6 @@
 import { Board, Mark, Move } from './GameModels';
 
-export enum Screen {
+export enum AppScreen {
   SPLASH = 'SPLASH',
   ONBOARDING = 'ONBOARDING',
   HOME = 'HOME',
