@@ -40,4 +40,17 @@ class GameEngineTest {
             assertEquals(puzzle.answer, GameEngine.uniqueBestMove(puzzle.board, puzzle.player))
         }
     }
+
+    @Test fun classicLogicPuzzleHasExactlyOneSolution() {
+        assertEquals(1, LogicPuzzleEngine.countSolutions(LogicPuzzleEngine.classic6x6()))
+    }
+
+    @Test fun logicRulesDetectTriplesBalanceAndDuplicateLines() {
+        val triple = LogicPuzzleEngine.parse(listOf("XXXO..", "......", "......", "......", "......", "......"))
+        assertEquals(setOf(0, 1, 2), LogicPuzzleEngine.invalidCells(triple))
+
+        val duplicateRows = LogicPuzzleEngine.parse(listOf("XXOXOO", "XXOXOO", "......", "......", "......", "......"))
+        val invalid = LogicPuzzleEngine.invalidCells(duplicateRows)
+        assertEquals(true, (0 until 12).all { it in invalid })
+    }
 }

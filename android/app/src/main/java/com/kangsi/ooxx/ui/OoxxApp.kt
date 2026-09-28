@@ -1,6 +1,7 @@
 package com.kangsi.ooxx.ui
 
 import android.Manifest
+import android.bluetooth.BluetoothDevice
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.BackHandler
@@ -73,6 +74,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -100,13 +103,18 @@ import com.kangsi.ooxx.data.RankingEntry
 import com.kangsi.ooxx.game.Board
 import com.kangsi.ooxx.game.Mark
 import com.kangsi.ooxx.game.Move
+import com.kangsi.ooxx.game.LogicBoard
+import com.kangsi.ooxx.game.LogicPuzzleEngine
 import com.kangsi.ooxx.match.BluetoothMatchService
 import com.kangsi.ooxx.R
+import com.kangsi.ooxx.ui.theme.CardSurface
 import com.kangsi.ooxx.ui.theme.Coral
+import com.kangsi.ooxx.ui.theme.darkModeEnabled
 import com.kangsi.ooxx.ui.theme.Ink
 import com.kangsi.ooxx.ui.theme.Paper
 import com.kangsi.ooxx.ui.theme.Sky
 import com.kangsi.ooxx.ui.theme.SoftGray
+import com.kangsi.ooxx.ui.theme.TextSecondary
 import com.kangsi.ooxx.ui.theme.Sunny
 import com.kangsi.ooxx.ui.theme.Teal
 import java.time.Instant
@@ -117,6 +125,7 @@ import kotlin.random.Random
 @Composable
 fun OoxxApp(viewModel: OoxxViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    SideEffect { darkModeEnabled = state.settings.darkMode }
     val mainTabs = setOf(Screen.HOME, Screen.HISTORY, Screen.PROFILE)
     BackHandler(enabled = state.screen !in mainTabs && state.screen != Screen.SPLASH) {
         viewModel.navigate(Screen.HOME)
@@ -146,8 +155,18 @@ fun OoxxApp(viewModel: OoxxViewModel = viewModel()) {
                     back = { viewModel.navigate(Screen.HOME) },
                     start = viewModel::startGame
                 )
-                Screen.ROOM -> RoomScreen { viewModel.navigate(Screen.HOME) }
-                Screen.GAME -> GameScreen(state.game, viewModel::play, viewModel::undo, viewModel::surrender)
+                Screen.ROOM -> RoomScreen(
+                    network = state.network,
+                    back = { viewModel.navigate(Screen.HOME) },
+                    onCreate = viewModel::createRoom,
+                    onJoin = viewModel::joinRoom,
+                    onBluetoothHost = viewModel::bluetoothHost,
+                    onBluetoothJoin = viewModel::bluetoothJoin,
+                    bluetoothAvailable = viewModel.bluetoothAvailable(),
+                    onBluetoothDevices = viewModel::bluetoothDevices,
+                    onBluetoothStatus = viewModel::btStatus
+                )
+                Screen.GAME -> GameScreen(state.game, viewModel::play, viewModel::undo, viewModel::replay, viewModel::surrender)
                 Screen.RESULT -> ResultScreen(
                     result = state.result ?: MatchResult.DRAW,
                     session = state.game,
@@ -155,7 +174,13 @@ fun OoxxApp(viewModel: OoxxViewModel = viewModel()) {
                     home = { viewModel.navigate(Screen.HOME) }
                 )
                 Screen.HISTORY -> HistoryScreen(state.records, state.ranking)
-                Screen.PROFILE -> ProfileScreen(state.records)
+                Screen.PROFILE -> ProfileScreen(
+                    settings = state.settings,
+                    records = state.records,
+                    onSound = viewModel::setSound,
+                    onVibration = viewModel::setVibration,
+                    onDarkMode = viewModel::setDarkMode
+                )
             }
         }
     }
@@ -181,7 +206,7 @@ private fun SplashScreen() {
             Mascot("X", Sky)
         }
         Spacer(Modifier.height(24.dp))
-        Text("简单一局，快乐加倍！", color = Color.Gray)
+        Text("简单一局，快乐加倍！", color = TextSecondary)
     }
 }
 
@@ -212,7 +237,7 @@ private fun OnboardingScreen(onStart: () -> Unit) {
         Spacer(Modifier.height(22.dp))
         DemoBoard()
         Spacer(Modifier.height(17.dp))
-        Text("不复杂，但总有新乐趣 ❤", color = Color.DarkGray, fontSize = 14.sp)
+        Text("不复杂，但总有新乐趣 ❤", color = TextSecondary, fontSize = 14.sp)
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Mascot("O", Coral)
@@ -255,7 +280,7 @@ private fun HomeScreen(openMode: () -> Unit, local: () -> Unit, room: () -> Unit
         item { ProfileHeader() }
         item {
             Text("今天想怎么玩？", fontSize = 21.sp, fontWeight = FontWeight.Black)
-            Text("选择一种模式，马上开局", color = Color.Gray, fontSize = 13.sp)
+            Text("选择一种模式，马上开局", color = TextSecondary, fontSize = 13.sp)
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -300,7 +325,7 @@ private fun FeatureCard(icon: String, title: String, subtitle: String, color: Co
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, fontSize = 19.sp, fontWeight = FontWeight.Black)
-                Text(subtitle, color = Color.DarkGray, fontSize = 13.sp)
+                Text(subtitle, color = TextSecondary, fontSize = 13.sp)
             }
             Icon(Icons.Rounded.ChevronRight, null)
         }
@@ -318,7 +343,7 @@ private fun SmallModeCard(icon: String, title: String, subtitle: String, color: 
         Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Text(icon, fontSize = 24.sp)
             Text(title, fontSize = 15.sp, fontWeight = FontWeight.Black)
-            Text(subtitle, fontSize = 11.sp, color = Color.DarkGray)
+            Text(subtitle, fontSize = 11.sp, color = TextSecondary)
         }
     }
 }
@@ -340,11 +365,13 @@ private fun ModeScreen(loading: Boolean, back: () -> Unit, start: (GameKind) -> 
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(18.dp)) {
         PageTitle("选择模式", back)
         Spacer(Modifier.height(13.dp))
-        ModeOption("▦", "经典 3×3", "完整 Minimax，不会漏掉最优解", GameKind.AI_3X3, selected) { selected = it }
+        ModeOption("▦", "经典 3×3", "和 AI 对战 · 三子连线获胜", GameKind.AI_3X3, selected) { selected = it }
         Spacer(Modifier.height(9.dp))
         ModeOption("▦", "进阶 5×5", "四子连线，更大的挑战", GameKind.AI_5X5, selected) { selected = it }
         Spacer(Modifier.height(9.dp))
-        ModeOption("⏱", "每日唯一解", "从网络获取并在本地验证", GameKind.DAILY, selected) { selected = it }
+        ModeOption("◫", "逻辑 OOXX 6×6", "等量、不三连、行列不重复", GameKind.LOGIC_6X6, selected) { selected = it }
+        Spacer(Modifier.height(9.dp))
+        ModeOption("⏱", "每日唯一解", "每天一题，全网相同", GameKind.DAILY, selected) { selected = it }
         Spacer(Modifier.weight(1f))
         if (loading) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
         else PrimaryButton(if (selected == GameKind.DAILY) "获取今日题目" else "开始匹配") { start(selected) }
@@ -356,14 +383,14 @@ private fun ModeOption(icon: String, title: String, subtitle: String, kind: Game
     val active = kind == selected
     Card(
         onClick = { choose(kind) },
-        colors = CardDefaults.cardColors(containerColor = if (active) Sky.copy(.17f) else Color.White),
-        modifier = Modifier.fillMaxWidth().border(if (active) 3.dp else 1.dp, if (active) Sky else Color.LightGray, RoundedCornerShape(18.dp))
+        colors = CardDefaults.cardColors(containerColor = if (active) Sky.copy(.17f) else CardSurface),
+        modifier = Modifier.fillMaxWidth().border(if (active) 3.dp else 1.dp, if (active) Sky else Ink.copy(.25f), RoundedCornerShape(18.dp))
     ) {
         Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(icon, fontSize = 26.sp, color = Sky)
             Column(Modifier.padding(horizontal = 12.dp).weight(1f)) {
                 Text(title, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                Text(subtitle, fontSize = 11.sp, color = Color.Gray)
+                Text(subtitle, fontSize = 11.sp, color = TextSecondary)
             }
             Icon(Icons.Rounded.ChevronRight, contentDescription = "选择$title", tint = Ink.copy(alpha = .7f))
         }
@@ -371,18 +398,52 @@ private fun ModeOption(icon: String, title: String, subtitle: String, kind: Game
 }
 
 @Composable
-private fun RoomScreen(back: () -> Unit) {
+private fun RoomScreen(
+    network: NetworkRoom,
+    back: () -> Unit,
+    onCreate: () -> Unit,
+    onJoin: (String) -> Unit,
+    onBluetoothHost: () -> Unit,
+    onBluetoothJoin: (BluetoothDevice) -> Unit,
+    bluetoothAvailable: Boolean,
+    onBluetoothDevices: () -> List<BluetoothDevice>,
+    onBluetoothStatus: (String) -> Unit
+) {
     val context = LocalContext.current
-    val bluetooth = remember { BluetoothMatchService(context) }
     var tab by remember { mutableIntStateOf(0) }
     var roomCode by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("选择连接方式") }
-    var pairedNames by remember { mutableStateOf<List<String>>(emptyList()) }
+    var paired by remember { mutableStateOf<List<BluetoothDevice>>(emptyList()) }
+    var busy by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         if (grants.values.all { it }) {
-            pairedNames = runCatching { bluetooth.pairedDevices().map { it.name ?: it.address } }.getOrDefault(emptyList())
-            status = if (pairedNames.isEmpty()) "没有已配对设备，请先在系统设置中配对" else "请选择已配对设备"
-        } else status = "需要蓝牙权限才能发现和连接设备"
+            paired = runCatching { onBluetoothDevices() }.getOrDefault(emptyList())
+            status = if (paired.isEmpty()) "没有已配对设备，请先在系统设置中配对" else "请选择已配对设备，或让好友连你"
+            onBluetoothStatus(status)
+        } else {
+            status = "需要蓝牙权限才能发现和连接设备"
+            onBluetoothStatus(status)
+        }
+    }
+
+    // 监听/连接失败后把主机按钮恢复可用，避免一直卡在「等待连接中」
+    LaunchedEffect(network.statusMessage) {
+        val message = network.statusMessage
+        if (message.contains("失败") || message.contains("断开") || message.contains("不支持")) busy = false
+    }
+
+    fun requireBluetoothPermissions(): Boolean {
+        val permissions = if (Build.VERSION.SDK_INT >= 31) {
+            arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+        } else {
+            arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        return if (permissions.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }) {
+            true
+        } else {
+            launcher.launch(permissions)
+            false
+        }
     }
 
     LazyColumn(
@@ -431,96 +492,196 @@ private fun RoomScreen(back: () -> Unit) {
                 )
             }
             item {
-                PrimaryButton("创建房间") {
-                    roomCode = (100000 + Random.nextInt(900000)).toString()
-                    status = "房间 $roomCode 已创建，等待好友加入…"
-                }
+                PrimaryButton("创建房间") { onCreate() }
             }
             item {
                 SecondaryButton("加入房间") {
-                    status = if (roomCode.length == 6) "正在连接房间 $roomCode…" else "请输入正确的 6 位房间码"
+                    if (roomCode.length == 6) onJoin(roomCode) else status = "请输入正确的 6 位房间码"
                 }
+            }
+            if (network.roomCode.isNotEmpty() && network.waiting) {
+                item {
+                    Text(
+                        "房间码 ${network.roomCode}",
+                        Modifier.fillMaxWidth().background(SoftGray, RoundedCornerShape(14.dp)).padding(vertical = 14.dp),
+                        textAlign = TextAlign.Center,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Ink
+                    )
+                }
+            }
+            if (network.connecting) {
+                item { CircularProgressIndicator(Modifier.padding(vertical = 4.dp)) }
             }
         } else {
             item {
-                InfoStrip(if (bluetooth.isAvailable()) "蓝牙可用于附近两机离线对战" else "此设备不支持蓝牙")
+                InfoStrip(if (bluetoothAvailable) "两机近距离离线对战：一台当主机，另一台连接" else "此设备不支持蓝牙")
             }
             item {
-                PrimaryButton("查找已配对设备") {
-                    val permissions = if (Build.VERSION.SDK_INT >= 31) arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT) else arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-                    if (permissions.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }) {
-                        pairedNames = runCatching { bluetooth.pairedDevices().map { it.name ?: it.address } }.getOrDefault(emptyList())
-                        status = if (pairedNames.isEmpty()) "没有已配对设备" else "请选择设备开始连接"
-                    } else launcher.launch(permissions)
+                PrimaryButton(if (busy) "等待连接中…" else "作为主机等待好友连接") {
+                    if (!bluetoothAvailable || busy) return@PrimaryButton
+                    if (!requireBluetoothPermissions()) return@PrimaryButton
+                    busy = true
+                    status = "正在等待好友连接…"
+                    onBluetoothHost()
                 }
             }
-            items(pairedNames) { name ->
+            item {
+                SecondaryButton("刷新已配对设备") {
+                    if (!requireBluetoothPermissions()) return@SecondaryButton
+                    paired = runCatching { onBluetoothDevices() }.getOrDefault(emptyList())
+                    status = if (paired.isEmpty()) "没有已配对设备，请先在系统设置中配对" else "点击设备连接对方（对方需先点「作为主机等待」）"
+                }
+            }
+            items(paired, key = { it.address }) { device ->
                 Card(
-                    onClick = { status = "正在通过蓝牙连接 $name…" },
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    onClick = {
+                        if (!requireBluetoothPermissions()) return@Card
+                        status = "正在通过蓝牙连接 ${device.name ?: device.address}…"
+                        onBluetoothJoin(device)
+                    },
+                    colors = CardDefaults.cardColors(containerColor = CardSurface),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Bluetooth, null, tint = Teal)
-                        Text(name, Modifier.padding(start = 12.dp).weight(1f), fontWeight = FontWeight.Bold)
+                        Text(device.name ?: device.address, Modifier.padding(start = 12.dp).weight(1f), fontWeight = FontWeight.Bold)
                         Icon(Icons.Rounded.ChevronRight, null)
                     }
                 }
             }
         }
-        item { InfoStrip(status) }
-        item { Text("协议层已实现 TCP 房间连接和 Bluetooth RFCOMM 双向消息通道；部署服务器后修改 BuildConfig 地址即可。", fontSize = 12.sp, color = Color.Gray) }
+        item { InfoStrip(if (tab == 0) network.error ?: network.statusMessage else status) }
     }
 }
 
 @Composable
 private fun ConnectionTab(text: String, icon: ImageVector, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     Row(
-        modifier.clip(RoundedCornerShape(12.dp)).background(if (selected) Color.White else Color.Transparent)
+        modifier.clip(RoundedCornerShape(12.dp)).background(if (selected) CardSurface else Color.Transparent)
             .clickable(onClick = onClick).padding(12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, Modifier.size(20.dp), tint = if (selected) Coral else Color.Gray)
+        Icon(icon, null, Modifier.size(20.dp), tint = if (selected) Coral else TextSecondary)
         Text(text, Modifier.padding(start = 6.dp), fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
     }
 }
 
 @Composable
-private fun GameScreen(session: GameSession, play: (Move) -> Unit, undo: () -> Unit, surrender: () -> Unit) {
+private fun GameScreen(session: GameSession, play: (Move) -> Unit, undo: () -> Unit, reset: () -> Unit, surrender: () -> Unit) {
     Column(
         Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 18.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            PlayerBadge(R.drawable.avatar_kangsi, "康思", if (session.turn == Mark.X) Coral else Color.Gray)
-            Text("VS", Modifier.weight(1f), textAlign = TextAlign.Center, color = Sky, fontWeight = FontWeight.Black)
-            PlayerBadge(R.drawable.avatar_xiaoming, if (session.kind == GameKind.LOCAL) "小明" else "AI", if (session.turn == Mark.O) Sky else Color.Gray)
+        if (session.kind == GameKind.LOGIC_6X6) {
+            Text("逻辑 OOXX", Modifier.fillMaxWidth().padding(top = 18.dp), fontSize = 24.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+            Text("6×6 经典谜题", color = TextSecondary, fontSize = 13.sp)
+        } else {
+            Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                val myTurn = session.turn == session.playerMark
+                PlayerBadge(
+                    R.drawable.avatar_kangsi,
+                    if (session.kind == GameKind.NETWORK || session.kind == GameKind.BLUETOOTH) "你" else "康思",
+                    if (myTurn) Coral else TextSecondary
+                )
+                Text("VS", Modifier.weight(1f), textAlign = TextAlign.Center, color = Sky, fontWeight = FontWeight.Black)
+                PlayerBadge(
+                    R.drawable.avatar_xiaoming,
+                    when (session.kind) {
+                        GameKind.LOCAL -> "小明"
+                        GameKind.NETWORK -> session.opponentName ?: "在线玩家"
+                        GameKind.BLUETOOTH -> session.opponentName ?: "蓝牙好友"
+                        else -> "AI"
+                    },
+                    if (!myTurn) Sky else TextSecondary
+                )
+            }
         }
         Spacer(Modifier.height(8.dp))
         Text(session.message, Modifier.background(Sunny.copy(.35f), RoundedCornerShape(12.dp)).padding(horizontal = 18.dp, vertical = 7.dp), fontSize = 18.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.height(12.dp))
-        GameBoard(session.board, enabled = !session.isAiThinking && session.puzzleSolved == null, onMove = play)
+        if (session.kind == GameKind.LOGIC_6X6) {
+            session.logicBoard?.let { LogicGameBoard(it, play) }
+        } else {
+            GameBoard(
+                session.board,
+                enabled = !session.isAiThinking && session.puzzleSolved == null &&
+                    (session.turn == session.playerMark ||
+                        (session.kind != GameKind.NETWORK && session.kind != GameKind.BLUETOOTH)),
+                onMove = play
+            )
+        }
         Spacer(Modifier.height(12.dp))
         Text(
             when (session.kind) {
                 GameKind.DAILY -> "本题已通过算法验证，存在且仅存在一个最优解"
                 GameKind.AI_3X3 -> "经典 3×3 · 三子连线获胜"
                 GameKind.AI_5X5 -> "进阶 5×5 · 四子连线获胜"
+                GameKind.LOGIC_6X6 -> "每行每列 X/O 等量 · 不三连 · 行列不重复"
                 GameKind.LOCAL -> "双人同屏 · 轮流落子"
+                GameKind.NETWORK -> "网络对战 · 三子连线获胜"
+                GameKind.BLUETOOTH -> "蓝牙对战 · 三子连线获胜"
             },
-            color = Color.Gray,
+            color = TextSecondary,
             fontSize = 13.sp,
             textAlign = TextAlign.Center
         )
         // 原型中的操作区紧随棋盘，而不是吸附到系统底部。
         Spacer(Modifier.height(24.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            GameAction(Icons.Rounded.Undo, "悔棋", Modifier.weight(1f), undo)
-            GameAction(Icons.Rounded.Casino, "表情", Modifier.weight(1f)) { }
-            GameAction(Icons.Rounded.SportsEsports, "认输", Modifier.weight(1f), surrender)
+            if (session.kind == GameKind.NETWORK || session.kind == GameKind.BLUETOOTH) {
+                GameAction(Icons.Rounded.SportsEsports, "认输", Modifier.weight(1f), surrender)
+            } else {
+                GameAction(Icons.Rounded.Undo, "悔棋", Modifier.weight(1f), undo)
+                if (session.kind == GameKind.LOGIC_6X6) {
+                    GameAction(Icons.Rounded.Refresh, "重置", Modifier.weight(1f), reset)
+                    GameAction(Icons.AutoMirrored.Rounded.ArrowBack, "放弃", Modifier.weight(1f), surrender)
+                } else {
+                    GameAction(Icons.Rounded.Casino, "表情", Modifier.weight(1f)) { }
+                    GameAction(Icons.Rounded.SportsEsports, "认输", Modifier.weight(1f), surrender)
+                }
+            }
         }
         Spacer(Modifier.height(18.dp))
+    }
+}
+
+@Composable
+private fun LogicGameBoard(board: LogicBoard, onMove: (Move) -> Unit) {
+    val invalid = remember(board.cells) { LogicPuzzleEngine.invalidCells(board) }
+    val boardSize = 294.dp
+    Column(Modifier.size(boardSize).border(3.dp, Ink, RoundedCornerShape(8.dp)).background(CardSurface)) {
+        repeat(board.size) { row ->
+            Row(Modifier.weight(1f)) {
+                repeat(board.size) { col ->
+                    val index = row * board.size + col
+                    val mark = board[row, col]
+                    val given = index in board.givens
+                    val conflict = index in invalid
+                    Box(
+                        Modifier.weight(1f).fillMaxHeight()
+                            .background(when {
+                                conflict -> Coral.copy(alpha = .2f)
+                                given -> SoftGray
+                                else -> CardSurface
+                            })
+                            .border(if (conflict) 2.dp else 1.dp, if (conflict) Coral else Ink.copy(.55f))
+                            .clickable(enabled = !given) { onMove(Move(row, col)) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            when (mark) { Mark.X -> "X"; Mark.O -> "O"; Mark.EMPTY -> "" },
+                            color = if (mark == Mark.X) Sky else Coral,
+                            fontSize = 27.sp,
+                            fontWeight = if (given) FontWeight.Black else FontWeight.Bold
+                        )
+                        if (given) Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(4.dp).clip(CircleShape).background(Ink.copy(.45f)))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -537,7 +698,7 @@ private fun PlayerBadge(avatarRes: Int, name: String, color: Color) {
 @Composable
 private fun GameBoard(board: Board, enabled: Boolean, onMove: (Move) -> Unit) {
     val boardSize = if (board.size == 3) 250.dp else 282.dp
-    Column(Modifier.size(boardSize).border(3.dp, Ink, RoundedCornerShape(8.dp)).background(Color.White)) {
+    Column(Modifier.size(boardSize).border(3.dp, Ink, RoundedCornerShape(8.dp)).background(CardSurface)) {
         repeat(board.size) { row ->
             Row(Modifier.weight(1f)) {
                 repeat(board.size) { col ->
@@ -568,10 +729,10 @@ private fun GameAction(icon: ImageVector, text: String, modifier: Modifier, acti
 
 @Composable
 private fun ResultScreen(result: MatchResult, session: GameSession, replay: () -> Unit, home: () -> Unit) {
-    val (title, emoji, color) = when (result) {
-        MatchResult.WIN -> Triple("你赢了！", "🏆", Sunny)
-        MatchResult.LOSS -> Triple("再接再厉", "💪", Sky)
-        MatchResult.DRAW -> Triple("平局！", "🤝", Teal)
+    val (title, color) = when (result) {
+        MatchResult.WIN -> "你赢了！" to Sunny
+        MatchResult.LOSS -> "再接再厉" to Sky
+        MatchResult.DRAW -> "平局！" to Teal
     }
     Column(
         Modifier.fillMaxSize().statusBarsPadding().padding(24.dp),
@@ -587,14 +748,17 @@ private fun ResultScreen(result: MatchResult, session: GameSession, replay: () -
                 Modifier.fillMaxSize().padding(6.dp),
                 contentScale = ContentScale.Fit
             )
-            if (result != MatchResult.WIN) Text(emoji, Modifier.align(Alignment.TopCenter), fontSize = 28.sp)
         }
         Spacer(Modifier.height(16.dp))
-        Card(colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+        Card(colors = CardDefaults.cardColors(containerColor = CardSurface), modifier = Modifier.fillMaxWidth()) {
             Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Stat("本局用时", "${(session.moves * 7 + 12).coerceAtLeast(18)}秒")
                 Stat("步数", session.moves.toString())
-                Stat("模式", if (session.board.size == 3) "3×3" else "5×5")
+                Stat("模式", when (session.kind) {
+                    GameKind.LOGIC_6X6 -> "逻辑 6×6"
+                    GameKind.AI_5X5 -> "5×5"
+                    else -> "3×3"
+                })
             }
         }
         Spacer(Modifier.height(20.dp))
@@ -607,7 +771,7 @@ private fun ResultScreen(result: MatchResult, session: GameSession, replay: () -
 @Composable
 private fun Stat(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = Color.Gray, fontSize = 12.sp)
+        Text(label, color = TextSecondary, fontSize = 12.sp)
         Text(value, fontWeight = FontWeight.Black, fontSize = 18.sp)
     }
 }
@@ -623,13 +787,13 @@ private fun HistoryScreen(records: List<MatchRecord>, ranking: List<RankingEntry
     ) {
         item { Text("对战记录", fontSize = 23.sp, fontWeight = FontWeight.Black) }
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+            Card(colors = CardDefaults.cardColors(containerColor = CardSurface), modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(58.dp).border(7.dp, Sky, CircleShape), contentAlignment = Alignment.Center) {
                         Text("$rate%", fontSize = 17.sp, fontWeight = FontWeight.Black)
                     }
                     Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                        Text("胜率", color = Color.Gray, fontSize = 12.sp)
+                        Text("胜率", color = TextSecondary, fontSize = 12.sp)
                         Text("${records.size} 场 · $wins 胜", fontSize = 18.sp, fontWeight = FontWeight.Black)
                     }
                     Text("连胜 3 场", fontSize = 12.sp, color = Ink)
@@ -644,7 +808,7 @@ private fun HistoryScreen(records: List<MatchRecord>, ranking: List<RankingEntry
                         Modifier.background(if (index == 0) Teal.copy(.22f) else SoftGray, RoundedCornerShape(12.dp))
                             .padding(horizontal = 10.dp, vertical = 5.dp),
                         fontSize = 11.sp,
-                        color = if (index == 0) Teal else Color.Gray
+                        color = if (index == 0) Teal else TextSecondary
                     )
                 }
             }
@@ -657,7 +821,7 @@ private fun HistoryScreen(records: List<MatchRecord>, ranking: List<RankingEntry
 @Composable
 private fun RankingRow(entry: RankingEntry) {
     Row(
-        Modifier.fillMaxWidth().background(if (entry.isMe) Sky.copy(.16f) else Color.White, RoundedCornerShape(14.dp)).padding(14.dp),
+        Modifier.fillMaxWidth().background(if (entry.isMe) Sky.copy(.16f) else CardSurface, RoundedCornerShape(14.dp)).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(if (entry.rank <= 3) listOf("🥇", "🥈", "🥉")[entry.rank - 1] else entry.rank.toString(), Modifier.width(42.dp), fontSize = 22.sp)
@@ -670,25 +834,28 @@ private fun RankingRow(entry: RankingEntry) {
 private fun RecordRow(record: MatchRecord) {
     val formatter = remember { DateTimeFormatter.ofPattern("MM-dd HH:mm") }
     val color = when (record.result) { MatchResult.WIN -> Teal; MatchResult.LOSS -> Coral; MatchResult.DRAW -> Sky }
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
+    Card(colors = CardDefaults.cardColors(containerColor = CardSurface), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(42.dp).clip(CircleShape).background(color.copy(.18f)), contentAlignment = Alignment.Center) {
                 Text(when (record.result) { MatchResult.WIN -> "胜"; MatchResult.LOSS -> "负"; MatchResult.DRAW -> "平" }, color = color, fontWeight = FontWeight.Black)
             }
             Column(Modifier.padding(start = 12.dp).weight(1f)) {
                 Text(record.mode, fontWeight = FontWeight.Bold)
-                Text("对手：${record.opponent} · ${record.steps} 步", fontSize = 12.sp, color = Color.Gray)
+                Text("对手：${record.opponent} · ${record.steps} 步", fontSize = 12.sp, color = TextSecondary)
             }
-            Text(formatter.format(Instant.ofEpochMilli(record.playedAt).atZone(ZoneId.systemDefault())), fontSize = 11.sp, color = Color.Gray)
+            Text(formatter.format(Instant.ofEpochMilli(record.playedAt).atZone(ZoneId.systemDefault())), fontSize = 11.sp, color = TextSecondary)
         }
     }
 }
 
 @Composable
-private fun ProfileScreen(records: List<MatchRecord>) {
-    var sound by remember { mutableStateOf(true) }
-    var vibration by remember { mutableStateOf(true) }
-    var dark by remember { mutableStateOf(false) }
+private fun ProfileScreen(
+    settings: Settings,
+    records: List<MatchRecord>,
+    onSound: (Boolean) -> Unit,
+    onVibration: (Boolean) -> Unit,
+    onDarkMode: (Boolean) -> Unit
+) {
     val wins = records.count { it.result == MatchResult.WIN }
     LazyColumn(
         Modifier.fillMaxSize().statusBarsPadding(),
@@ -703,7 +870,7 @@ private fun ProfileScreen(records: List<MatchRecord>) {
                 }
                 Column(Modifier.padding(start = 16.dp).weight(1f)) {
                     Text("康思", fontSize = 19.sp, fontWeight = FontWeight.Black)
-                    Text("小程序游客 ID · 免用户名密码", color = Color.Gray)
+                    Text("小程序游客 ID · 免用户名密码", color = TextSecondary)
                 }
                 Icon(Icons.Rounded.ChevronRight, null)
             }
@@ -716,27 +883,32 @@ private fun ProfileScreen(records: List<MatchRecord>) {
             }
         }
         item { SectionTitle("偏好设置") }
-        item { SettingSwitch(Icons.Rounded.VolumeUp, "声音", sound) { sound = it } }
-        item { SettingSwitch(Icons.Rounded.Vibration, "震动", vibration) { vibration = it } }
-        item { SettingSwitch(Icons.Rounded.DarkMode, "深色模式", dark) { dark = it } }
+        item { SettingSwitch(Icons.Rounded.VolumeUp, "声音", settings.sound, onSound) }
+        item { SettingSwitch(Icons.Rounded.Vibration, "震动", settings.vibration, onVibration) }
+        item { SettingSwitch(Icons.Rounded.DarkMode, "深色模式", settings.darkMode, onDarkMode) }
         item { SettingLink(Icons.Rounded.Info, "关于我们", "OOXX Android 1.0") }
-        item { InfoStrip("Android 原生 Compose 版本 · 数据仅保存在本机") }
+        item { InfoStrip("对战数据仅保存在本机") }
     }
 }
 
 @Composable
 private fun Achievement(icon: String, value: String, label: String, modifier: Modifier) {
-    Column(modifier.height(74.dp).background(Color.White, RoundedCornerShape(12.dp)).padding(7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier.background(CardSurface, RoundedCornerShape(12.dp)).padding(horizontal = 7.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(icon, fontSize = 18.sp)
-        Text(value, fontWeight = FontWeight.Black, fontSize = 16.sp)
-        Text(label, color = Color.Gray, fontSize = 10.sp)
+        Spacer(Modifier.height(3.dp))
+        Text(value, fontWeight = FontWeight.Black, fontSize = 16.sp, maxLines = 1)
+        Spacer(Modifier.height(2.dp))
+        Text(label, color = TextSecondary, fontSize = 10.sp, maxLines = 1)
     }
 }
 
 @Composable
 private fun SettingSwitch(icon: ImageVector, title: String, checked: Boolean, change: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = Color.Gray)
+    Row(Modifier.fillMaxWidth().background(CardSurface, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = TextSecondary)
         Text(title, Modifier.padding(start = 12.dp).weight(1f), fontWeight = FontWeight.Medium)
         Switch(checked, change)
     }
@@ -744,10 +916,10 @@ private fun SettingSwitch(icon: ImageVector, title: String, checked: Boolean, ch
 
 @Composable
 private fun SettingLink(icon: ImageVector, title: String, detail: String) {
-    Row(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(12.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = Color.Gray)
+    Row(Modifier.fillMaxWidth().background(CardSurface, RoundedCornerShape(12.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = TextSecondary)
         Text(title, Modifier.padding(start = 12.dp).weight(1f), fontWeight = FontWeight.Medium)
-        Text(detail, color = Color.Gray, fontSize = 12.sp)
+        Text(detail, color = TextSecondary, fontSize = 12.sp)
     }
 }
 
@@ -790,7 +962,7 @@ private fun SectionTitle(text: String) { Text(text, fontSize = 18.sp, fontWeight
 
 @Composable
 private fun EmptyState(text: String) {
-    Text(text, Modifier.fillMaxWidth().padding(30.dp), textAlign = TextAlign.Center, color = Color.Gray)
+    Text(text, Modifier.fillMaxWidth().padding(30.dp), textAlign = TextAlign.Center, color = TextSecondary)
 }
 
 @Composable

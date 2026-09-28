@@ -1,12 +1,13 @@
 # OOXX 康思小游戏（Android）
 
-基于作业原型实现的 Android 原生 Jetpack Compose 应用。项目提供完整的 OOXX（井字棋）体验，并将算法求解、唯一解校验、网络题库、排行榜、网络房间及蓝牙对战入口纳入同一应用。
+基于作业原型实现的 Android 原生 Jetpack Compose 应用。项目同时提供连线对战与 OOXX 二元逻辑谜题，并将算法求解、唯一解校验、网络题库、排行榜、网络房间及蓝牙对战入口纳入同一应用。
 
 ## 已实现功能
 
 - 原型对应页面：启动、引导、首页、模式选择、好友房、对局、结算、战绩、我的。
 - 经典 `3×3`：Alpha-Beta Minimax 精确求解；AI 不会漏掉最优着。
 - 进阶 `5×5`：四子连线规则，使用棋形评分 AI。
+- 逻辑 OOXX `6×6`：遵循每行列 X/O 等量、禁止三个同符号连续、行列不可重复的规则；支持不可改题面、实时冲突提示、悔棋和重置，内置题目经算法验证为唯一解。
 - 每日挑战：优先请求网络题库，本地重新计算最佳着；仅在**唯一最高分着**成立且服务端答案一致时接受题目。网络不可用时使用本地生成且已校验的唯一解题目。
 - 本地对局战绩、胜率和积分排行榜，使用 SharedPreferences 持久化。
 - 网络对战：提供 TCP 房间协议客户端；蓝牙对战：提供 RFCOMM 主机/连接通道及 Android 12+ 运行时权限请求。
@@ -49,10 +50,11 @@ MATCH_WS_URL = "ws://192.168.1.23:9527/ws"
 ## 关键源码
 
 - `app/src/main/java/com/kangsi/ooxx/game/GameEngine.kt`：规则、胜负判定、Minimax、唯一解生成。
+- `app/src/main/java/com/kangsi/ooxx/game/LogicPuzzle.kt`：二元逻辑棋盘、规则校验、完成判定与解数验证。
 - `app/src/main/java/com/kangsi/ooxx/data/GameRepository.kt`：网络题库校验、本地战绩和排行榜。
 - `app/src/main/java/com/kangsi/ooxx/match/MatchTransport.kt`：标准 WebSocket 与 Bluetooth RFCOMM 传输通道。
 - `app/src/main/java/com/kangsi/ooxx/ui/OoxxApp.kt`：Compose 原型页面和交互。
 
 ## 验证
 
-`GameEngineTest` 覆盖行/列/对角线胜负、AI 必胜着、无唯一解拒绝，以及多组随机唯一解题目校验。
+`GameEngineTest` 覆盖行/列/对角线胜负、AI 必胜着、无唯一解拒绝、多组随机唯一解题目，以及逻辑 OOXX 的三连、重复行列和唯一解校验。

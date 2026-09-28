@@ -1,7 +1,10 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 
 export class RankingStore {
+  #persistChain = Promise.resolve();
+
   constructor(filePath) { this.filePath = filePath; this.entries = new Map(); }
   async load() {
     try { for (const entry of JSON.parse(await readFile(this.filePath, "utf8")).entries ?? []) this.entries.set(entry.id, entry); }
@@ -21,9 +24,15 @@ export class RankingStore {
     if (result === "LOSS") { entry.score += 2; entry.losses += 1; }
     entry.updatedAt = Date.now(); this.entries.set(id, entry); await this.persist(); return entry;
   }
-  async persist() {
+  // 并发结算（Promise.all）时串行落盘，避免互相覆盖/竞争同一临时文件
+  persist() {
+    const run = this.#persistChain.then(() => this.writeSnapshot());
+    this.#persistChain = run.catch(() => { });
+    return run;
+  }
+  async writeSnapshot() {
     await mkdir(dirname(this.filePath), { recursive: true });
-    const temporary = `${this.filePath}.tmp`;
+    const temporary = `${this.filePath}.${randomUUID()}.tmp`;
     await writeFile(temporary, JSON.stringify({ entries: [...this.entries.values()] }, null, 2), "utf8");
     await rename(temporary, this.filePath);
   }

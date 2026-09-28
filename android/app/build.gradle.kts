@@ -16,8 +16,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
 
-        buildConfigField("String", "GAME_API_BASE_URL", "\"https://example.com/api/\"")
-        buildConfigField("String", "MATCH_WS_URL", "\"ws://example.com:9527/ws\"")
+        buildConfigField("String", "GAME_API_BASE_URL", "\"http://47.243.15.216:9527/\"")
+        buildConfigField("String", "MATCH_WS_URL", "\"ws://47.243.15.216:9527/ws\"")
     }
 
     buildFeatures {
@@ -59,6 +59,7 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("org.json:json:20240303")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
