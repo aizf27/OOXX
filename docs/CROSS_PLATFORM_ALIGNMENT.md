@@ -2,7 +2,7 @@
 
 ## 基线
 
-- Android 参考：`aizf27/OOXX`，`main@1406e32`，检查日期 2026-09-23。
+- Android 参考：`aizf27/OOXX`，`main@1406e32`，检查日期 2026-09-28。
 - Android 当前技术：Kotlin + Jetpack Compose；不是 XML。
 - 鸿蒙：ArkTS + ArkUI。
 - 两端统一业务和交互结果，不要求控件实现一致。
