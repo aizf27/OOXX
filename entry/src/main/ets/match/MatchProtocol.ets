@@ -13,7 +13,7 @@ export interface RoomSnapshotPayload {
   code: string;
   size: number;
   winLength: number;
-  board: string[][];
+  board: string;
   turn: string;
   status: string;
   winner: string | null;
