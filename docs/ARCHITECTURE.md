@@ -35,3 +35,7 @@ GameEngine / Repository / MatchConnection
 - 网络棋盘使用长度为 `size × size` 的扁平字符串。
 - 客户端只提交操作，服务器快照覆盖客户端状态。
 - WebSocket 与蓝牙统一实现 `MatchConnection`。
+
+## 验证状态
+
+- 2026-09-28：DevEco Studio 编译及鸿蒙模拟器运行通过。
