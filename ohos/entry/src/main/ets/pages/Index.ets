@@ -7,29 +7,75 @@ import { OnboardingPage } from './OnboardingPage';
 import { ResultPage } from './ResultPage';
 import { RoomPage } from './RoomPage';
 import { SplashPage } from './SplashPage';
-import { AppScreen, GameKind, MatchResult } from '../model/AppModels';
+import { AppScreen, GameKind, GameSession, MatchResult, NetworkRoom, Settings } from '../model/AppModels';
 import { Mark, Move } from '../model/GameModels';
 import { LocalGameRepository } from '../repository/LocalGameRepository';
-import { GameStore } from '../store/GameStore';
+import { GameStore, MoveHandling } from '../store/GameStore';
+import { PreferenceStore } from '../service/PreferenceStore';
+import { MatchStore, MatchStateListener } from '../match/MatchStore';
+import { DailyClient } from '../network/DailyClient';
+import { vibrator } from '@kit.SensorServiceKit';
+import { promptAction } from '@kit.ArkUI';
+import { Context } from '@kit.AbilityKit';
 
 @Entry
 @Component
-struct Index {
+struct Index implements MatchStateListener {
   @State screen: AppScreen = AppScreen.SPLASH;
   @State board: string[] = ['', '', '', '', '', '', '', '', ''];
   @State turnText: string = '轮到你了';
   @State result: MatchResult | null = null;
   @State boardSize: number = 3;
   @State currentKind: GameKind = GameKind.AI_3X3;
+  @State settings: Settings = new Settings();
+  @State network: NetworkRoom = new NetworkRoom();
   private readonly gameStore: GameStore = new GameStore(new LocalGameRepository());
+  private readonly matchStore: MatchStore = new MatchStore();
+  private readonly dailyClient: DailyClient = new DailyClient();
+  private context: Context | null = null;
+
+  aboutToAppear(): void {
+    this.matchStore.setListener(this);
+    const ctx = getContext(this);
+    this.context = ctx;
+    PreferenceStore.getInstance().init(ctx).then(() => {
+      const loaded = PreferenceStore.getInstance().loadSettings();
+      this.settings = loaded;
+      this.gameStore.setSettings(loaded);
+    }).catch(() => {
+      // ignore
+    });
+    setTimeout(() => {
+      if (this.screen === AppScreen.SPLASH) {
+        this.screen = AppScreen.ONBOARDING;
+      }
+    }, 900);
+  }
+
+  aboutToDisappear(): void {
+    this.matchStore.close();
+    this.matchStore.setListener(null);
+  }
 
   showHome(): void {
+    this.refreshRecords();
     this.screen = AppScreen.HOME;
   }
 
-  startGame(kind: GameKind): void {
+  refreshRecords(): void {
+    this.gameStore.session = new GameSession();
+  }
+
+  async startGame(kind: GameKind): Promise<void> {
     this.currentKind = kind;
-    this.gameStore.start(kind);
+    this.matchStore.close();
+    if (kind === GameKind.DAILY) {
+      const remote = await this.dailyClient.fetchDailyPuzzle();
+      const puzzle = remote ?? this.gameStore.fallbackPuzzle();
+      this.gameStore.start(kind, puzzle);
+    } else {
+      this.gameStore.start(kind);
+    }
     this.result = null;
     this.syncGameState();
     this.screen = AppScreen.GAME;
@@ -41,10 +87,23 @@ struct Index {
     }
     const row = Math.floor(index / this.boardSize);
     const col = index % this.boardSize;
-    await this.gameStore.play(new Move(row, col));
+    const move = new Move(row, col);
+
+    if (this.currentKind === GameKind.NETWORK) {
+      this.matchStore.netPlay(move);
+      return;
+    }
+
+    const decision = await this.gameStore.play(move);
+    if (decision.handling === MoveHandling.REJECTED) {
+      this.showToast(decision.message);
+      return;
+    }
+    this.tapFeedback();
     this.syncGameState();
     if (this.gameStore.session.isAiThinking) {
       await this.gameStore.playAiTurn();
+      this.tapFeedback();
       this.syncGameState();
     }
     if (this.gameStore.result !== null) {
@@ -55,17 +114,65 @@ struct Index {
 
   undo(): void {
     if (this.gameStore.undo()) {
+      this.tapFeedback();
       this.syncGameState();
     }
   }
 
   async surrender(): Promise<void> {
+    if (this.currentKind === GameKind.NETWORK) {
+      this.matchStore.netSurrender();
+      return;
+    }
     await this.gameStore.surrender();
     this.syncGameState();
     this.result = this.gameStore.result;
     if (this.result !== null) {
       this.screen = AppScreen.RESULT;
     }
+  }
+
+  onCreateRoom(): void {
+    this.currentKind = GameKind.NETWORK;
+    this.gameStore.start(GameKind.NETWORK);
+    this.syncGameState();
+    this.matchStore.createRoom();
+  }
+
+  onJoinRoom(code: string): void {
+    this.currentKind = GameKind.NETWORK;
+    this.gameStore.start(GameKind.NETWORK);
+    this.syncGameState();
+    this.matchStore.joinRoom(code);
+  }
+
+  onRoomBack(): void {
+    this.matchStore.close();
+    this.showHome();
+  }
+
+  setSound(enabled: boolean): void {
+    this.settings = this.settings.copy({ sound: enabled });
+    this.gameStore.setSettings(this.settings);
+    this.saveSettings();
+  }
+
+  setVibration(enabled: boolean): void {
+    this.settings = this.settings.copy({ vibration: enabled });
+    this.gameStore.setSettings(this.settings);
+    this.saveSettings();
+  }
+
+  setDarkMode(enabled: boolean): void {
+    this.settings = this.settings.copy({ darkMode: enabled });
+    this.gameStore.setSettings(this.settings);
+    this.saveSettings();
+  }
+
+  private saveSettings(): void {
+    PreferenceStore.getInstance().saveSettings(this.settings).catch(() => {
+      // ignore
+    });
   }
 
   gameModeText(): string {
@@ -77,6 +184,12 @@ struct Index {
     }
     if (this.currentKind === GameKind.DAILY) {
       return '每日挑战';
+    }
+    if (this.currentKind === GameKind.NETWORK) {
+      return '网络对战';
+    }
+    if (this.currentKind === GameKind.BLUETOOTH) {
+      return '蓝牙对战';
     }
     return '经典 3×3';
   }
@@ -90,6 +203,44 @@ struct Index {
     }
     this.board = cells;
     this.turnText = session.message;
+  }
+
+  // MatchStateListener
+  onNetworkChanged(network: NetworkRoom): void {
+    this.network = network;
+  }
+
+  onGameSessionChanged(session: GameSession): void {
+    this.gameStore.applyAuthoritativeState(session, null);
+    this.syncGameState();
+  }
+
+  onScreenChanged(screen: AppScreen): void {
+    this.screen = screen;
+  }
+
+  onFinished(result: MatchResult): void {
+    this.gameStore.applyAuthoritativeState(this.gameStore.session, result);
+    this.result = result;
+    this.screen = AppScreen.RESULT;
+  }
+
+  private tapFeedback(): void {
+    if (this.settings.vibration) {
+      try {
+        vibrator.startVibration({ type: 'time', duration: 30 }, { usage: 'touch' });
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  private showToast(message: string): void {
+    try {
+      promptAction.showToast({ message, duration: 2000 });
+    } catch {
+      // ignore
+    }
   }
 
   build() {
@@ -116,15 +267,18 @@ struct Index {
         })
       } else if (this.screen === AppScreen.ROOM) {
         RoomPage({
-          onBack: () => this.showHome(),
-          onCreate: () => {},
-          onJoin: () => {}
+          network: this.network,
+          onBack: () => this.onRoomBack(),
+          onCreate: () => this.onCreateRoom(),
+          onJoin: (code: string) => this.onJoinRoom(code)
         })
       } else if (this.screen === AppScreen.GAME) {
         GamePage({
           board: this.board,
           playerTurn: this.turnText,
           isLocal: this.currentKind === GameKind.LOCAL,
+          isNetwork: this.currentKind === GameKind.NETWORK,
+          kind: this.currentKind,
           onBack: () => this.showHome(),
           onTapCell: (index: number) => this.tapCell(index),
           onUndo: () => this.undo(),
@@ -137,8 +291,12 @@ struct Index {
         })
       } else if (this.screen === AppScreen.PROFILE) {
         ProfilePage({
+          settings: this.settings,
           onBack: () => this.showHome(),
-          onOpenHistory: () => this.screen = AppScreen.HISTORY
+          onOpenHistory: () => this.screen = AppScreen.HISTORY,
+          onSoundChanged: (enabled: boolean) => this.setSound(enabled),
+          onVibrationChanged: (enabled: boolean) => this.setVibration(enabled),
+          onDarkModeChanged: (enabled: boolean) => this.setDarkMode(enabled)
         })
       } else if (this.screen === AppScreen.RESULT) {
         ResultPage({
@@ -152,5 +310,6 @@ struct Index {
     }
     .width('100%')
     .height('100%')
+    .backgroundColor(this.settings.darkMode ? '#201F1C' : '#FFFDF6')
   }
 }

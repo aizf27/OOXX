@@ -1,15 +1,25 @@
 import { OoxxCharacter } from '../components/OoxxCharacter';
 import { OoxxTopBar } from '../components/OoxxTopBar';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { NetworkRoom } from '../model/AppModels';
 import { OoxxColors, OoxxRadius, OoxxSpacing } from '../theme/OoxxTheme';
 
 @Component
 export struct RoomPage {
+  @Prop network: NetworkRoom = new NetworkRoom();
   @State code: string = '';
-  @State status: string = '';
   onBack: () => void = () => {};
   onCreate: () => void = () => {};
-  onJoin: () => void = () => {};
+  onJoin: (code: string) => void = () => {};
+
+  normalizedCode(): string {
+    return this.code
+      .split('')
+      .filter((char) => /[a-zA-Z0-9]/.test(char))
+      .join('')
+      .toUpperCase()
+      .slice(0, 6);
+  }
 
   build() {
     Column() {
@@ -28,7 +38,8 @@ export struct RoomPage {
       .justifyContent(FlexAlign.Center)
       .width('100%')
       .margin({ bottom: 28 })
-      TextInput({ placeholder: '输入房间码' })
+
+      TextInput({ placeholder: '输入 6 位房间码' })
         .height(52)
         .width('100%')
         .fontSize(16)
@@ -38,17 +49,50 @@ export struct RoomPage {
         .border({ width: 1, color: OoxxColors.LINE })
         .onChange((value: string) => this.code = value)
         .margin({ bottom: 14 })
-      PrimaryButton({ label: '创建房间', color: OoxxColors.CORAL, onTap: () => { this.status = '房间功能将在跨端阶段接入'; this.onCreate(); } })
+
+      PrimaryButton({ label: '创建房间', color: OoxxColors.CORAL, onTap: () => this.onCreate() })
         .margin({ bottom: 12 })
-      PrimaryButton({ label: '加入房间', color: OoxxColors.TEAL, onTap: () => { this.status = this.code.length === 0 ? '请先输入房间码' : '房间功能将在跨端阶段接入'; this.onJoin(); } })
-      if (this.status.length > 0) {
-        Text(this.status)
+      PrimaryButton({ label: '加入房间', color: OoxxColors.TEAL, onTap: () => this.onJoin(this.normalizedCode()) })
+
+      if (this.network.roomCode.length > 0 && this.network.waiting) {
+        Text(`房间码 ${this.network.roomCode}`)
+          .width('100%')
+          .height(56)
+          .fontSize(24)
+          .fontWeight(FontWeight.Black)
+          .fontColor(OoxxColors.INK)
+          .textAlign(TextAlign.Center)
+          .backgroundColor(OoxxColors.SOFT_GRAY)
+          .borderRadius(OoxxRadius.CARD)
+          .margin({ top: 16 })
+      }
+
+      if (this.network.connecting) {
+        Text('连接中…')
           .fontSize(14)
-          .fontColor(OoxxColors.CORAL)
+          .fontColor(OoxxColors.MUTED)
           .textAlign(TextAlign.Center)
           .width('100%')
           .margin({ top: 16 })
       }
+
+      if (this.network.error !== null && this.network.error.length > 0) {
+        Text(this.network.error)
+          .fontSize(14)
+          .fontColor(OoxxColors.DANGER)
+          .textAlign(TextAlign.Center)
+          .width('100%')
+          .margin({ top: 16 })
+      } else if (this.network.statusMessage.length > 0 &&
+        !(this.network.roomCode.length > 0 && this.network.waiting)) {
+        Text(this.network.statusMessage)
+          .fontSize(14)
+          .fontColor(OoxxColors.MUTED)
+          .textAlign(TextAlign.Center)
+          .width('100%')
+          .margin({ top: 16 })
+      }
+
       Blank()
       Text('联网后由 WebSocket 房间接管状态，客户端只发送操作。')
         .fontSize(13)

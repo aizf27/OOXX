@@ -14,6 +14,7 @@ export class OoxxColors {
   static readonly WHITE: string = '#FFFFFF';
   static readonly BOARD: string = '#FFF9E9';
   static readonly DANGER: string = '#E95D56';
+  static readonly SOFT_GRAY: string = '#F0EEE8';
 }
 
 export class OoxxSpacing {

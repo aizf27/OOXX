@@ -1,4 +1,4 @@
-import { GameSession, MatchRecord, MatchResult, RankingEntry, AppScreen } from '../model/AppModels';
+import { GameSession, MatchRecord, MatchResult, RankingEntry, AppScreen, NetworkRoom, Settings } from '../model/AppModels';
 
 export class AppState {
   screen: AppScreen = AppScreen.SPLASH;
@@ -8,4 +8,6 @@ export class AppState {
   ranking: RankingEntry[] = [];
   networkMessage: string = '';
   isLoadingPuzzle: boolean = false;
+  settings: Settings = new Settings();
+  network: NetworkRoom = new NetworkRoom();
 }

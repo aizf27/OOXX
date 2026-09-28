@@ -43,10 +43,12 @@ export class GameSession {
   readonly puzzleAnswer: Move | null;
   readonly puzzleSolved: boolean | null;
   readonly isAiThinking: boolean;
+  readonly opponentName: string | null;
 
   constructor(board: Board = new Board(), turn: Mark = Mark.X, playerMark: Mark = Mark.X,
     kind: GameKind = GameKind.AI_3X3, moves: number = 0, message: string = '轮到你了',
-    puzzleAnswer: Move | null = null, puzzleSolved: boolean | null = null, isAiThinking: boolean = false) {
+    puzzleAnswer: Move | null = null, puzzleSolved: boolean | null = null,
+    isAiThinking: boolean = false, opponentName: string | null = null) {
     this.board = board;
     this.turn = turn;
     this.playerMark = playerMark;
@@ -56,6 +58,22 @@ export class GameSession {
     this.puzzleAnswer = puzzleAnswer;
     this.puzzleSolved = puzzleSolved;
     this.isAiThinking = isAiThinking;
+    this.opponentName = opponentName;
+  }
+
+  copy(params: Partial<GameSession> = {}): GameSession {
+    return new GameSession(
+      params.board ?? this.board,
+      params.turn ?? this.turn,
+      params.playerMark ?? this.playerMark,
+      params.kind ?? this.kind,
+      params.moves ?? this.moves,
+      params.message ?? this.message,
+      params.puzzleAnswer ?? this.puzzleAnswer,
+      params.puzzleSolved ?? this.puzzleSolved,
+      params.isAiThinking ?? this.isAiThinking,
+      params.opponentName ?? this.opponentName
+    );
   }
 }
 
@@ -95,5 +113,52 @@ export class RankingEntry {
     this.losses = losses;
     this.draws = draws;
     this.isMe = isMe;
+  }
+}
+
+export class Settings {
+  readonly sound: boolean;
+  readonly vibration: boolean;
+  readonly darkMode: boolean;
+
+  constructor(sound: boolean = true, vibration: boolean = true, darkMode: boolean = false) {
+    this.sound = sound;
+    this.vibration = vibration;
+    this.darkMode = darkMode;
+  }
+
+  copy(params: Partial<Settings> = {}): Settings {
+    return new Settings(
+      params.sound ?? this.sound,
+      params.vibration ?? this.vibration,
+      params.darkMode ?? this.darkMode
+    );
+  }
+}
+
+export class NetworkRoom {
+  readonly connecting: boolean;
+  readonly roomCode: string;
+  readonly waiting: boolean;
+  readonly statusMessage: string;
+  readonly error: string | null;
+
+  constructor(connecting: boolean = false, roomCode: string = '', waiting: boolean = false,
+    statusMessage: string = '选择连接方式', error: string | null = null) {
+    this.connecting = connecting;
+    this.roomCode = roomCode;
+    this.waiting = waiting;
+    this.statusMessage = statusMessage;
+    this.error = error;
+  }
+
+  copy(params: Partial<NetworkRoom> = {}): NetworkRoom {
+    return new NetworkRoom(
+      params.connecting ?? this.connecting,
+      params.roomCode ?? this.roomCode,
+      params.waiting ?? this.waiting,
+      params.statusMessage ?? this.statusMessage,
+      params.error ?? this.error
+    );
   }
 }

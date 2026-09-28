@@ -3,12 +3,17 @@ import { OoxxCharacter } from '../components/OoxxCharacter';
 import { SettingRow } from '../components/SettingRow';
 import { OoxxTopBar } from '../components/OoxxTopBar';
 import { StatCard } from '../components/StatCard';
+import { Settings } from '../model/AppModels';
 import { OoxxColors, OoxxRadius, OoxxSpacing } from '../theme/OoxxTheme';
 
 @Component
 export struct ProfilePage {
+  @Prop settings: Settings = new Settings();
   onBack: () => void = () => {};
   onOpenHistory: () => void = () => {};
+  onSoundChanged: (enabled: boolean) => void = () => {};
+  onVibrationChanged: (enabled: boolean) => void = () => {};
+  onDarkModeChanged: (enabled: boolean) => void = () => {};
 
   build() {
     Column() {
@@ -40,9 +45,24 @@ export struct ProfilePage {
       .width('100%')
       .margin({ bottom: 16 })
       Column() {
-        SettingRow({ icon: '◖', label: '声音', value: '开启', onTap: () => {} })
-        SettingRow({ icon: '⌁', label: '震动', value: '开启', onTap: () => {} })
-        SettingRow({ icon: '☾', label: '深色模式', value: '关闭', onTap: () => {} })
+        SettingRow({
+          icon: '◖',
+          label: '声音',
+          value: this.settings.sound ? '开启' : '关闭',
+          onTap: () => this.onSoundChanged(!this.settings.sound)
+        })
+        SettingRow({
+          icon: '⌁',
+          label: '震动',
+          value: this.settings.vibration ? '开启' : '关闭',
+          onTap: () => this.onVibrationChanged(!this.settings.vibration)
+        })
+        SettingRow({
+          icon: '☾',
+          label: '深色模式',
+          value: this.settings.darkMode ? '开启' : '关闭',
+          onTap: () => this.onDarkModeChanged(!this.settings.darkMode)
+        })
         SettingRow({ icon: 'ⓘ', label: '关于我们', onTap: () => {} })
       }
       .width('100%')

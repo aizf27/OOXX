@@ -1,5 +1,5 @@
-import { GameKind, GameSession, MatchRecord, MatchResult } from '../model/AppModels';
-import { Board, Mark, Move, Puzzle, oppositeMark } from '../model/GameModels';
+import { GameKind, GameSession, MatchRecord, MatchResult, Settings } from '../model/AppModels';
+import { Board, Mark, Move, oppositeMark, Puzzle } from '../model/GameModels';
 import { RecordRepository } from '../repository/GameRepository';
 import { GameEngine } from '../service/GameEngine';
 
@@ -26,10 +26,23 @@ export class GameStore {
   private recorded: boolean = false;
   session: GameSession = new GameSession();
   result: MatchResult | null = null;
+  settings: Settings = new Settings();
 
   constructor(records: RecordRepository, engine: GameEngine = new GameEngine()) {
     this.records = records;
     this.engine = engine;
+  }
+
+  setSettings(settings: Settings): void {
+    this.settings = settings;
+  }
+
+  fallbackPuzzle(): Puzzle {
+    return this.engine.fallbackPuzzle();
+  }
+
+  generateUniquePuzzle(): Puzzle {
+    return this.engine.generateUniquePuzzle();
   }
 
   start(kind: GameKind, puzzle: Puzzle | null = null): void {
@@ -126,14 +139,13 @@ export class GameStore {
     return MoveHandling.LOCAL_APPLIED;
   }
 
-  async applyAuthoritativeState(session: GameSession, result: MatchResult | null): Promise<void> {
-    if (session.kind !== GameKind.NETWORK) {
-      throw new Error('只有网络对局允许应用服务器权威状态');
-    }
+  applyAuthoritativeState(session: GameSession, result: MatchResult | null): void {
     this.session = session;
     this.result = result;
     if (result !== null) {
-      await this.saveRecord(result);
+      this.saveRecord(result).catch(() => {
+        // ignore persistence errors
+      });
     }
   }
 
@@ -183,7 +195,7 @@ export class GameStore {
       return '每日挑战';
     }
     if (this.session.kind === GameKind.NETWORK) {
-      return '网络房间';
+      return '网络对战';
     }
     if (this.session.kind === GameKind.BLUETOOTH) {
       return '蓝牙对战';
@@ -195,11 +207,8 @@ export class GameStore {
     if (this.session.kind === GameKind.LOCAL) {
       return '本地玩家';
     }
-    if (this.session.kind === GameKind.NETWORK) {
-      return '在线玩家';
-    }
-    if (this.session.kind === GameKind.BLUETOOTH) {
-      return '附近玩家';
+    if (this.session.kind === GameKind.NETWORK || this.session.kind === GameKind.BLUETOOTH) {
+      return this.session.opponentName ?? '在线玩家';
     }
     if (this.session.kind === GameKind.DAILY) {
       return '每日题目';

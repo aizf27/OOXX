@@ -1,3 +1,4 @@
+import { GameKind } from '../model/AppModels';
 import { OoxxColors, OoxxRadius, OoxxSpacing } from '../theme/OoxxTheme';
 
 @Component
@@ -28,6 +29,8 @@ export struct GamePage {
   @Prop board: string[] = ['', '', '', '', '', '', '', '', ''];
   @Prop playerTurn: string = '轮到你了';
   @Prop isLocal: boolean = false;
+  @Prop isNetwork: boolean = false;
+  @Prop kind: GameKind = GameKind.AI_3X3;
   onBack: () => void = () => {};
   onTapCell: (index: number) => void = (_: number) => {};
   onUndo: () => void = () => {};
@@ -35,6 +38,26 @@ export struct GamePage {
 
   cellColor(index: number): string {
     return this.board[index] === 'O' ? OoxxColors.CORAL : OoxxColors.SKY;
+  }
+
+  leftName(): string {
+    if (this.isLocal) {
+      return '玩家 O';
+    }
+    if (this.isNetwork) {
+      return '康思';
+    }
+    return '康思';
+  }
+
+  rightName(): string {
+    if (this.isLocal) {
+      return '玩家 X';
+    }
+    if (this.isNetwork) {
+      return '在线玩家';
+    }
+    return 'AI 棋手';
   }
 
   build() {
@@ -51,13 +74,13 @@ export struct GamePage {
       Row() {
         Column({ space: 4 }) {
           Text('O').fontSize(22).fontWeight(FontWeight.Bold).fontColor(OoxxColors.CORAL)
-          Text(this.isLocal ? '玩家 O' : '康思').fontSize(13).fontColor(OoxxColors.INK)
+          Text(this.leftName()).fontSize(13).fontColor(OoxxColors.INK)
         }
         .layoutWeight(1)
         Text('0  :  0').fontSize(21).fontWeight(FontWeight.Bold).fontColor(OoxxColors.INK)
         Column({ space: 4 }) {
           Text('X').fontSize(22).fontWeight(FontWeight.Bold).fontColor(OoxxColors.SKY)
-          Text(this.isLocal ? '玩家 X' : 'AI 棋手').fontSize(13).fontColor(OoxxColors.INK)
+          Text(this.rightName()).fontSize(13).fontColor(OoxxColors.INK)
         }
         .layoutWeight(1)
       }
