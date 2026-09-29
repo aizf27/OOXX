@@ -45,3 +45,4 @@ id、size、winLength、board、next、answer、title
 - `modes` 固定经典模式为 `3×3 / 连 3`，进阶模式为 `5×5 / 连 4`。
 - `scoring` 固定胜、平、负积分为 `30 / 10 / 2`。
 - 修改规则时先更新契约，再同步三端实现和测试。
+- 每日挑战公共测试数据位于 `contracts/puzzles.v1.json`，合法题目必须具有唯一最优解，非法题目必须被 Android 与鸿蒙共同拒绝。

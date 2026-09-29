@@ -30,7 +30,9 @@
 
 ## 契约修改流程
 
-1. 修改根目录 `contracts/*.json`。
-2. 执行 `node tools/sync-contract-fixtures.mjs` 同步鸿蒙夹具。
+1. 修改根目录 `contracts/*.json`；棋盘、题目和 WebSocket 消息分别维护在对应版本契约中。
+2. 执行 `node tools/sync-contract-fixtures.mjs` 校验契约并同步鸿蒙夹具。
 3. 分别运行 Android、鸿蒙和服务端契约测试。
 4. 执行 `node tools/sync-contract-fixtures.mjs --check` 确认生成文件没有漂移。
+
+`ohos/entry/src/test/fixtures/ContractFixtures.ets` 是生成文件，禁止手工修改。Android 与服务端直接读取根目录 JSON，鸿蒙测试只读取生成后的 ArkTS 常量。

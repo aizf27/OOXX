@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@ohos/hypium';
 import { MatchResult } from '../main/ets/model/AppModels';
+import { DailyPuzzlePayload } from '../main/ets/network/ApiContracts';
 import { Board, Mark } from '../main/ets/model/GameModels';
 import {
   ConnectedRoomEvent,
@@ -11,16 +12,23 @@ import {
 } from '../main/ets/match/RoomProtocol';
 import { scoreForResult } from '../main/ets/repository/LocalGameRepository';
 import { GameEngine } from '../main/ets/service/GameEngine';
+import { PuzzleValidator } from '../main/ets/service/PuzzleValidator';
 import {
   CLIENT_MESSAGE_CASES,
   CONTRACT_SCORE_DRAW,
   CONTRACT_SCORE_LOSS,
   CONTRACT_SCORE_WIN,
   CONTRACT_VERSION,
+  ContractInvalidRuleCase,
+  ContractPuzzlePayload,
   ContractRuleCase,
   ContractWireCase,
   GAME_RULE_CASES,
-  SERVER_MESSAGE_CASES
+  INVALID_GAME_RULE_CASES,
+  INVALID_PUZZLE_CASES,
+  INVALID_SERVER_MESSAGE_CASES,
+  SERVER_MESSAGE_CASES,
+  VALID_PUZZLE_CASES
 } from './fixtures/ContractFixtures';
 
 function wireById(items: ContractWireCase[], id: string): string {
@@ -42,24 +50,56 @@ function markFromWire(value: string | null): Mark | null {
   return null;
 }
 
-function boardFrom(item: ContractRuleCase): Board {
+function boardFromValues(size: number, winLength: number, encoded: string): Board {
+  if (!((size === 3 && winLength === 3) || (size === 5 && winLength === 4))) {
+    throw new Error('不支持的棋盘模式');
+  }
+  if (encoded.length !== size * size) {
+    throw new Error('棋盘长度无效');
+  }
   const cells: Mark[] = [];
-  for (let index = 0; index < item.board.length; index++) {
-    const value = item.board[index];
+  for (let index = 0; index < encoded.length; index++) {
+    const value = encoded[index];
     if (value === 'X') {
       cells.push(Mark.X);
     } else if (value === 'O') {
       cells.push(Mark.O);
-    } else {
+    } else if (value === '.') {
       cells.push(Mark.EMPTY);
+    } else {
+      throw new Error('棋盘包含非法棋子');
     }
   }
-  return new Board(item.size, item.winLength, cells);
+  return new Board(size, winLength, cells);
+}
+
+function boardFrom(item: ContractRuleCase): Board {
+  return boardFromValues(item.size, item.winLength, item.board);
+}
+
+function puzzlePayloadFrom(item: ContractPuzzlePayload): DailyPuzzlePayload {
+  return {
+    id: item.id,
+    title: item.title,
+    size: item.size,
+    winLength: item.winLength,
+    board: item.board,
+    next: item.next,
+    answer: {
+      row: item.answer.row,
+      col: item.answer.col
+    }
+  };
+}
+
+function invalidBoardFrom(item: ContractInvalidRuleCase): Board {
+  return boardFromValues(item.size, item.winLength, item.board);
 }
 
 export default function crossPlatformContractTest() {
   describe('CrossPlatformContract', () => {
     const engine = new GameEngine();
+    const puzzleValidator = new PuzzleValidator(engine);
 
     it('matchesSharedGameRulesAndScoring', 0, () => {
       expect(CONTRACT_VERSION).assertEqual(1);
@@ -69,9 +109,39 @@ export default function crossPlatformContractTest() {
         expect(engine.winner(board)).assertEqual(markFromWire(item.winner));
         expect(engine.isDraw(board)).assertEqual(item.draw);
       }
+      for (let index = 0; index < INVALID_GAME_RULE_CASES.length; index++) {
+        let rejected = false;
+        try {
+          invalidBoardFrom(INVALID_GAME_RULE_CASES[index]);
+        } catch (_) {
+          rejected = true;
+        }
+        expect(rejected).assertTrue();
+      }
       expect(scoreForResult(MatchResult.WIN)).assertEqual(CONTRACT_SCORE_WIN);
       expect(scoreForResult(MatchResult.DRAW)).assertEqual(CONTRACT_SCORE_DRAW);
       expect(scoreForResult(MatchResult.LOSS)).assertEqual(CONTRACT_SCORE_LOSS);
+    });
+
+    it('validatesSharedPuzzleCases', 0, () => {
+      for (let index = 0; index < VALID_PUZZLE_CASES.length; index++) {
+        const item = VALID_PUZZLE_CASES[index];
+        const puzzle = puzzleValidator.validate(puzzlePayloadFrom(item.payload));
+        expect(puzzle.answer.row).assertEqual(item.expected.answer.row);
+        expect(puzzle.answer.col).assertEqual(item.expected.answer.col);
+        const completed = puzzle.board.place(puzzle.answer, puzzle.next);
+        expect(engine.winner(completed)).assertEqual(markFromWire(item.expected.winnerAfterMove));
+      }
+
+      for (let index = 0; index < INVALID_PUZZLE_CASES.length; index++) {
+        let rejected = false;
+        try {
+          puzzleValidator.validate(puzzlePayloadFrom(INVALID_PUZZLE_CASES[index].payload));
+        } catch (_) {
+          rejected = true;
+        }
+        expect(rejected).assertTrue();
+      }
     });
 
     it('serializesClientMessagesFromContract', 0, () => {
@@ -136,6 +206,10 @@ export default function crossPlatformContractTest() {
       expect(failure instanceof FailureRoomEvent).assertTrue();
       if (failure instanceof FailureRoomEvent) {
         expect(failure.code).assertEqual('NOT_YOUR_TURN');
+      }
+
+      for (let index = 0; index < INVALID_SERVER_MESSAGE_CASES.length; index++) {
+        expect(RoomProtocol.decode(INVALID_SERVER_MESSAGE_CASES[index].wire)).assertNull();
       }
     });
   });

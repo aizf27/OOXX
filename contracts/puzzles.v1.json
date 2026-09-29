@@ -1,0 +1,132 @@
+{
+  "schema": "ooxx.puzzles",
+  "version": 1,
+  "validCases": [
+    {
+      "id": "daily-diagonal-finish",
+      "payload": {
+        "id": "daily-001",
+        "title": "对角线的唯一机会",
+        "size": 3,
+        "winLength": 3,
+        "board": "XO..X.O..",
+        "next": "X",
+        "answer": {
+          "row": 2,
+          "col": 2
+        }
+      },
+      "expected": {
+        "answer": {
+          "row": 2,
+          "col": 2
+        },
+        "winnerAfterMove": "X"
+      }
+    },
+    {
+      "id": "daily-top-row-finish",
+      "payload": {
+        "id": "daily-002",
+        "title": "补全顶行",
+        "size": 3,
+        "winLength": 3,
+        "board": "XX.OO....",
+        "next": "X",
+        "answer": {
+          "row": 0,
+          "col": 2
+        }
+      },
+      "expected": {
+        "answer": {
+          "row": 0,
+          "col": 2
+        },
+        "winnerAfterMove": "X"
+      }
+    }
+  ],
+  "invalidCases": [
+    {
+      "id": "invalid-puzzle-board-length",
+      "payload": {
+        "id": "invalid-001",
+        "title": "棋盘长度错误",
+        "size": 3,
+        "winLength": 3,
+        "board": "XO",
+        "next": "X",
+        "answer": {
+          "row": 0,
+          "col": 0
+        }
+      },
+      "reason": "INVALID_BOARD_LENGTH"
+    },
+    {
+      "id": "invalid-puzzle-answer-out-of-bounds",
+      "payload": {
+        "id": "invalid-002",
+        "title": "答案越界",
+        "size": 3,
+        "winLength": 3,
+        "board": "XO..X.O..",
+        "next": "X",
+        "answer": {
+          "row": 3,
+          "col": 0
+        }
+      },
+      "reason": "ANSWER_OUT_OF_BOUNDS"
+    },
+    {
+      "id": "invalid-puzzle-answer-occupied",
+      "payload": {
+        "id": "invalid-003",
+        "title": "答案位置已占用",
+        "size": 3,
+        "winLength": 3,
+        "board": "XX.OO....",
+        "next": "X",
+        "answer": {
+          "row": 0,
+          "col": 0
+        }
+      },
+      "reason": "ANSWER_OCCUPIED"
+    },
+    {
+      "id": "invalid-puzzle-wrong-answer",
+      "payload": {
+        "id": "invalid-004",
+        "title": "答案错误",
+        "size": 3,
+        "winLength": 3,
+        "board": "XX.OO....",
+        "next": "X",
+        "answer": {
+          "row": 2,
+          "col": 2
+        }
+      },
+      "reason": "WRONG_ANSWER"
+    },
+    {
+      "id": "invalid-puzzle-no-unique-answer",
+      "payload": {
+        "id": "invalid-005",
+        "title": "无唯一解",
+        "size": 3,
+        "winLength": 3,
+        "board": ".........",
+        "next": "X",
+        "answer": {
+          "row": 1,
+          "col": 1
+        }
+      },
+      "reason": "NO_UNIQUE_SOLUTION"
+    }
+  ]
+}

@@ -75,4 +75,5 @@ Android 当前协议没有 `requestId` 和 `version`。正式跨端联调前升�
 - `scenario` 是三端共同使用的标准胜局流程。
 - `errorCodes` 是当前服务端允许返回的业务错误码。
 - `room.create` 必须同时携带 `size` 和 `winLength`，且只允许 `3/3` 或 `5/4`。
+- `invalidServerMessages` 固定客户端必须拒绝的畸形、未知或字段不完整消息。
 - 鸿蒙测试夹具由 `node tools/sync-contract-fixtures.mjs` 生成，禁止手工修改生成文件。

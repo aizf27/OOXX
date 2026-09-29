@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { WebSocket } from "ws";
 import { isDraw, winner } from "../src/game-rules.js";
+import { dailyPuzzle } from "../src/puzzles.js";
 import { scoreForResult } from "../src/ranking-store.js";
 import { ClientError, RoomService } from "../src/room-service.js";
 
@@ -15,6 +16,7 @@ const testRoot = dirname(fileURLToPath(import.meta.url));
 const serverRoot = join(testRoot, "..");
 const repositoryRoot = join(serverRoot, "..");
 const gameContract = JSON.parse(await readFile(join(repositoryRoot, "contracts", "game-rules.v1.json"), "utf8"));
+const puzzleContract = JSON.parse(await readFile(join(repositoryRoot, "contracts", "puzzles.v1.json"), "utf8"));
 const protocolContract = JSON.parse(await readFile(join(repositoryRoot, "contracts", "websocket-protocol.v1.json"), "utf8"));
 
 function boardFrom(encoded, size) {
@@ -142,6 +144,20 @@ test("公共规则与积分实现符合跨端契约", () => {
   }
   for (const [result, score] of Object.entries(gameContract.scoring)) {
     assert.equal(scoreForResult(result), score, result);
+  }
+});
+
+test("每日挑战符合公共题目契约", () => {
+  const matched = puzzleContract.validCases.find((item) => item.payload.id === dailyPuzzle.id);
+  assert.ok(matched, "服务端每日挑战未匹配公共合法题目");
+  assert.deepEqual(dailyPuzzle, matched.payload);
+
+  for (const item of puzzleContract.validCases) {
+    const { payload, expected } = item;
+    const board = boardFrom(payload.board, payload.size);
+    assert.equal(board[payload.answer.row][payload.answer.col], "", item.id);
+    board[payload.answer.row][payload.answer.col] = payload.next;
+    assert.equal(winner(board, payload.winLength), expected.winnerAfterMove, item.id);
   }
 });
 

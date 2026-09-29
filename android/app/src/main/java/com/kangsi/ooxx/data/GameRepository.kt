@@ -90,6 +90,42 @@ interface DailyPuzzleRepository {
     fun fallbackPuzzle(): Puzzle
 }
 
+internal object DailyPuzzleParser {
+    fun parse(json: JSONObject): Puzzle {
+        val size = json.getInt("size")
+        val encoded = json.getString("board")
+        check(encoded.length == size * size) { "棋盘数据长度错误" }
+
+        val winLength = json.getInt("winLength")
+        check((size == 3 && winLength == 3) || (size == 5 && winLength == 4)) {
+            "棋盘模式非法"
+        }
+        val cells = encoded.map { value ->
+            when (value.uppercaseChar()) {
+                'X' -> Mark.X
+                'O' -> Mark.O
+                '.' -> Mark.EMPTY
+                else -> error("棋盘包含非法棋子")
+            }
+        }
+        val player = when (json.getString("next")) {
+            "X" -> Mark.X
+            "O" -> Mark.O
+            else -> error("下一手玩家非法")
+        }
+        val answerJson = json.getJSONObject("answer")
+        val answer = Move(answerJson.getInt("row"), answerJson.getInt("col"))
+        check(answer.row in 0 until size && answer.col in 0 until size) { "题目答案越界" }
+
+        val board = Board(size = size, winLength = winLength, cells = cells)
+        check(board.cells[answer.row * size + answer.col] == Mark.EMPTY) { "题目答案位置无效" }
+        val calculated = GameEngine.uniqueBestMove(board, player)
+            ?: error("题目不存在唯一最优解")
+        check(answer == calculated) { "服务端答案校验失败" }
+        return Puzzle(board, player, answer)
+    }
+}
+
 class NetworkGameRepository(
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(3, TimeUnit.SECONDS)
@@ -111,30 +147,7 @@ class NetworkGameRepository(
                 .build()
             client.newCall(request).execute().use { response ->
                 check(response.isSuccessful) { "服务器返回 ${response.code}" }
-                val json = JSONObject(response.body?.string().orEmpty())
-                val size = json.optInt("size", 3)
-                check(size >= 3) { "棋盘尺寸非法" }
-                val encoded = json.getString("board")
-                check(encoded.length == size * size) { "棋盘数据长度错误" }
-                val board = Board(
-                    size = size,
-                    winLength = json.optInt("winLength", if (size == 3) 3 else 4),
-                    cells = encoded.map {
-                        when (it.uppercaseChar()) {
-                            'X' -> Mark.X
-                            'O' -> Mark.O
-                            else -> Mark.EMPTY
-                        }
-                    }
-                )
-                val player = if (json.optString("next", "X") == "O") Mark.O else Mark.X
-                val calculated = GameEngine.uniqueBestMove(board, player)
-                    ?: error("题目不存在唯一最优解")
-                val serverAnswer = json.optJSONObject("answer")?.let {
-                    Move(it.getInt("row"), it.getInt("col"))
-                }
-                check(serverAnswer == null || serverAnswer == calculated) { "服务端答案校验失败" }
-                Puzzle(board, player, calculated)
+                DailyPuzzleParser.parse(JSONObject(response.body?.string().orEmpty()))
             }
         }.onSuccess {
             Log.i(TAG, "每日挑战获取成功")

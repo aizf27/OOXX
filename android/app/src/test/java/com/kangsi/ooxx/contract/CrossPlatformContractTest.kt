@@ -1,5 +1,6 @@
 package com.kangsi.ooxx.contract
 
+import com.kangsi.ooxx.data.DailyPuzzleParser
 import com.kangsi.ooxx.data.MatchResult
 import com.kangsi.ooxx.data.MatchScore
 import com.kangsi.ooxx.game.Board
@@ -28,10 +29,45 @@ class CrossPlatformContractTest {
             assertEquals(case.getString("id"), case.getBoolean("draw"), board.isDraw())
         }
 
+        val invalidCases = contract.getJSONArray("invalidCases")
+        for (index in 0 until invalidCases.length()) {
+            val case = invalidCases.getJSONObject(index)
+            assertTrue(case.getString("id"), runCatching { boardFrom(case) }.isFailure)
+        }
+
         val scoring = contract.getJSONObject("scoring")
         assertEquals(scoring.getInt("WIN"), MatchScore.points(MatchResult.WIN))
         assertEquals(scoring.getInt("DRAW"), MatchScore.points(MatchResult.DRAW))
         assertEquals(scoring.getInt("LOSS"), MatchScore.points(MatchResult.LOSS))
+    }
+
+    @Test
+    fun `公共题目符合唯一解契约`() {
+        val contract = contract("puzzles.v1.json")
+        val validCases = contract.getJSONArray("validCases")
+        for (index in 0 until validCases.length()) {
+            val case = validCases.getJSONObject(index)
+            val payload = case.getJSONObject("payload")
+            val puzzle = DailyPuzzleParser.parse(payload)
+            val expected = case.getJSONObject("expected")
+            val answer = expected.getJSONObject("answer")
+            assertEquals(case.getString("id"), answer.getInt("row"), puzzle.answer.row)
+            assertEquals(case.getString("id"), answer.getInt("col"), puzzle.answer.col)
+            assertEquals(
+                case.getString("id"),
+                expected.getString("winnerAfterMove").toMark(),
+                puzzle.board.place(puzzle.answer, puzzle.player).winner()
+            )
+        }
+
+        val invalidCases = contract.getJSONArray("invalidCases")
+        for (index in 0 until invalidCases.length()) {
+            val case = invalidCases.getJSONObject(index)
+            assertTrue(
+                case.getString("id"),
+                runCatching { DailyPuzzleParser.parse(case.getJSONObject("payload")) }.isFailure
+            )
+        }
     }
 
     @Test
@@ -48,7 +84,8 @@ class CrossPlatformContractTest {
 
     @Test
     fun `服务端消息可以按契约解析`() {
-        val messages = messagesById(contract("websocket-protocol.v1.json"), "serverMessages")
+        val contract = contract("websocket-protocol.v1.json")
+        val messages = messagesById(contract, "serverMessages")
 
         assertEquals(RoomEvent.Connected("guest-server"), RoomProtocol.decode(messages.getValue("connected")))
         assertEquals(RoomEvent.HelloOk("guest-contract", "契约玩家"), RoomProtocol.decode(messages.getValue("hello-ok")))
@@ -75,6 +112,15 @@ class CrossPlatformContractTest {
             RoomEvent.Failure("NOT_YOUR_TURN", "还没有轮到你"),
             RoomProtocol.decode(messages.getValue("error"))
         )
+
+        val invalidMessages = contract.getJSONArray("invalidServerMessages")
+        for (index in 0 until invalidMessages.length()) {
+            val case = invalidMessages.getJSONObject(index)
+            val result = runCatching { RoomProtocol.decode(case.getString("wire")) }
+            val rejected = result.isFailure ||
+                (result.getOrNull() as? RoomEvent.Failure)?.code == "UNKNOWN_TYPE"
+            assertTrue(case.getString("id"), rejected)
+        }
     }
 
     private fun contract(name: String): JSONObject {
@@ -84,14 +130,19 @@ class CrossPlatformContractTest {
 
     private fun boardFrom(case: JSONObject): Board {
         val size = case.getInt("size")
+        val winLength = case.getInt("winLength")
+        check((size == 3 && winLength == 3) || (size == 5 && winLength == 4)) { "不支持的棋盘模式" }
+        val encoded = case.getString("board")
+        check(encoded.length == size * size) { "棋盘长度无效" }
         return Board(
             size = size,
-            winLength = case.getInt("winLength"),
-            cells = case.getString("board").map { value ->
+            winLength = winLength,
+            cells = encoded.map { value ->
                 when (value) {
                     'X' -> Mark.X
                     'O' -> Mark.O
-                    else -> Mark.EMPTY
+                    '.' -> Mark.EMPTY
+                    else -> error("棋盘包含非法棋子")
                 }
             }
         )

@@ -118,5 +118,27 @@
     "INVALID_MOVE",
     "CELL_OCCUPIED",
     "INVALID_SURRENDER"
+  ],
+  "invalidServerMessages": [
+    {
+      "id": "malformed-json",
+      "wire": "{bad json",
+      "expected": "REJECT"
+    },
+    {
+      "id": "unknown-type",
+      "wire": "{\"type\":\"contract.unknown\"}",
+      "expected": "REJECT"
+    },
+    {
+      "id": "missing-type",
+      "wire": "{\"playerId\":\"guest-server\"}",
+      "expected": "REJECT"
+    },
+    {
+      "id": "invalid-room-payload",
+      "wire": "{\"type\":\"room.state\",\"room\":null}",
+      "expected": "REJECT"
+    }
   ]
 }
