@@ -4,6 +4,7 @@ import puzzleValidatorTest from './PuzzleValidator.test';
 import localGameRepositoryTest from './LocalGameRepository.test';
 import gameStoreTest from './GameStore.test';
 import crossPlatformContractTest from './CrossPlatformContract.test';
+import historyFilterTest from './HistoryFilter.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -12,4 +13,5 @@ export default function testsuite() {
   localGameRepositoryTest();
   gameStoreTest();
   crossPlatformContractTest();
+  historyFilterTest();
 }

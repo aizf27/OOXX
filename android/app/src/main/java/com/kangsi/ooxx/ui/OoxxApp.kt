@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -80,6 +81,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,6 +96,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -111,6 +115,7 @@ import com.kangsi.ooxx.ui.theme.CardSurface
 import com.kangsi.ooxx.ui.theme.Coral
 import com.kangsi.ooxx.ui.theme.darkModeEnabled
 import com.kangsi.ooxx.ui.theme.Ink
+import com.kangsi.ooxx.ui.theme.OoxxTheme
 import com.kangsi.ooxx.ui.theme.Paper
 import com.kangsi.ooxx.ui.theme.Sky
 import com.kangsi.ooxx.ui.theme.SoftGray
@@ -776,8 +781,20 @@ private fun Stat(label: String, value: String) {
     }
 }
 
+internal enum class HistoryFilter(val label: String, val result: MatchResult?) {
+    ALL("全部", null),
+    WIN("胜利", MatchResult.WIN),
+    LOSS("失败", MatchResult.LOSS),
+    DRAW("平局", MatchResult.DRAW)
+}
+
+internal fun filterMatchRecords(records: List<MatchRecord>, filter: HistoryFilter): List<MatchRecord> =
+    filter.result?.let { result -> records.filter { it.result == result } } ?: records
+
 @Composable
 private fun HistoryScreen(records: List<MatchRecord>, ranking: List<RankingEntry>) {
+    var selectedFilter by rememberSaveable { mutableStateOf(HistoryFilter.ALL) }
+    val filteredRecords = filterMatchRecords(records, selectedFilter)
     val wins = records.count { it.result == MatchResult.WIN }
     val rate = if (records.isEmpty()) 0 else wins * 100 / records.size
     LazyColumn(
@@ -802,19 +819,49 @@ private fun HistoryScreen(records: List<MatchRecord>, ranking: List<RankingEntry
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("全部", "胜利", "失败", "平局").forEachIndexed { index, label ->
+                HistoryFilter.entries.forEach { filter ->
+                    val selected = filter == selectedFilter
                     Text(
-                        label,
-                        Modifier.background(if (index == 0) Teal.copy(.22f) else SoftGray, RoundedCornerShape(12.dp))
+                        filter.label,
+                        Modifier
+                            .selectable(
+                                selected = selected,
+                                role = Role.Tab,
+                                onClick = { selectedFilter = filter }
+                            )
+                            .background(if (selected) Teal.copy(.22f) else SoftGray, RoundedCornerShape(12.dp))
                             .padding(horizontal = 10.dp, vertical = 5.dp),
                         fontSize = 11.sp,
-                        color = if (index == 0) Teal else TextSecondary
+                        color = if (selected) Teal else TextSecondary,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                     )
                 }
             }
         }
-        if (records.isEmpty()) item { EmptyState("还没有记录，先去完成一局吧") }
-        items(records.take(20)) { record -> RecordRow(record) }
+        if (filteredRecords.isEmpty()) {
+            item {
+                EmptyState(
+                    if (records.isEmpty()) "还没有记录，先去完成一局吧"
+                    else "暂无${selectedFilter.label}战绩"
+                )
+            }
+        }
+        items(filteredRecords.take(20)) { record -> RecordRow(record) }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HistoryScreenPreview() {
+    OoxxTheme {
+        HistoryScreen(
+            records = listOf(
+                MatchRecord(MatchResult.WIN, "在线对战", "圈圈达人", steps = 5),
+                MatchRecord(MatchResult.LOSS, "本地双人", "好友", steps = 6),
+                MatchRecord(MatchResult.DRAW, "在线对战", "叉叉队长", steps = 9)
+            ),
+            ranking = emptyList()
+        )
     }
 }
 

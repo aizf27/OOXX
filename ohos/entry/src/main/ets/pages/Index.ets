@@ -7,7 +7,7 @@ import { OnboardingPage } from './OnboardingPage';
 import { ResultPage } from './ResultPage';
 import { RoomPage } from './RoomPage';
 import { SplashPage } from './SplashPage';
-import { AppScreen, GameKind, GameSession, MatchResult, NetworkRoom, Settings } from '../model/AppModels';
+import { AppScreen, GameKind, GameSession, MatchRecord, MatchResult, NetworkRoom, Settings } from '../model/AppModels';
 import { Mark, Move } from '../model/GameModels';
 import { LocalGameRepository } from '../repository/LocalGameRepository';
 import { GameStore, MoveHandling } from '../store/GameStore';
@@ -30,7 +30,9 @@ struct Index {
   @State currentKind: GameKind = GameKind.AI_3X3;
   @State settings: Settings = new Settings();
   @State network: NetworkRoom = new NetworkRoom();
-  private readonly gameStore: GameStore = new GameStore(new LocalGameRepository());
+  @State records: MatchRecord[] = [];
+  private readonly recordRepository: LocalGameRepository = new LocalGameRepository();
+  private readonly gameStore: GameStore = new GameStore(this.recordRepository);
   private readonly matchStore: MatchStore = new MatchStore();
   private readonly dailyClient: DailyClient = new DailyClient();
   private readonly soundPlayer: SoundPlayer = new SoundPlayer();
@@ -69,6 +71,20 @@ struct Index {
 
   refreshRecords(): void {
     this.gameStore.session = new GameSession();
+  }
+
+  openHistory(): void {
+    this.screen = AppScreen.HISTORY;
+    this.loadRecords();
+  }
+
+  async loadRecords(): Promise<void> {
+    this.records = [];
+    try {
+      this.records = await this.recordRepository.records();
+    } catch (_) {
+      this.records = [];
+    }
   }
 
   async startGame(kind: GameKind): Promise<void> {
@@ -278,7 +294,7 @@ struct Index {
           onStartLocal: () => this.startGame(GameKind.LOCAL),
           onOpenRoom: () => this.screen = AppScreen.ROOM,
           onOpenDaily: () => this.startGame(GameKind.DAILY),
-          onOpenHistory: () => this.screen = AppScreen.HISTORY,
+          onOpenHistory: () => this.openHistory(),
           onOpenProfile: () => this.screen = AppScreen.PROFILE
         })
       } else if (this.screen === AppScreen.MODE) {
@@ -311,6 +327,7 @@ struct Index {
         })
       } else if (this.screen === AppScreen.HISTORY) {
         HistoryPage({
+          records: this.records,
           onBack: () => this.showHome(),
           onOpenProfile: () => this.screen = AppScreen.PROFILE
         })
@@ -318,7 +335,7 @@ struct Index {
         ProfilePage({
           settings: this.settings,
           onBack: () => this.showHome(),
-          onOpenHistory: () => this.screen = AppScreen.HISTORY,
+          onOpenHistory: () => this.openHistory(),
           onSoundChanged: (enabled: boolean) => this.setSound(enabled),
           onVibrationChanged: (enabled: boolean) => this.setVibration(enabled),
           onDarkModeChanged: (enabled: boolean) => this.setDarkMode(enabled)

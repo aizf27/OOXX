@@ -48,7 +48,7 @@ data class GameSession(
     val playerMark: Mark = Mark.X,
     val kind: GameKind = GameKind.AI_3X3,
     val moves: Int = 0,
-    val message: String = "轮到你了",
+    val message: String = "轮到你了 · X",
     val puzzleAnswer: Move? = null,
     val puzzleSolved: Boolean? = null,
     val isAiThinking: Boolean = false,
@@ -245,7 +245,7 @@ class OoxxViewModel(application: Application) : AndroidViewModel(application) {
             message = when {
                 room.isWaiting -> "等待对手加入…"
                 room.yourMark == null -> "观战中"
-                room.turn == room.yourMark -> "轮到你了"
+                room.turn == room.yourMark -> "轮到你了 · ${room.turn.name}"
                 else -> "等待对方落子…"
             }
         )
@@ -522,7 +522,7 @@ class OoxxViewModel(application: Application) : AndroidViewModel(application) {
             board = nextBoard,
             turn = nextTurn,
             moves = session.moves + 1,
-            message = if (session.kind == GameKind.LOCAL) "轮到 ${nextTurn.name}" else "对手思考中…"
+            message = if (session.kind == GameKind.LOCAL) "轮到你了 · ${nextTurn.name}" else "对手思考中…"
         )
         _state.update { it.copy(game = updated) }
         if (completeIfNeeded(updated)) return
@@ -539,7 +539,7 @@ class OoxxViewModel(application: Application) : AndroidViewModel(application) {
                     turn = latest.turn.other(),
                     moves = latest.moves + 1,
                     isAiThinking = false,
-                    message = "轮到你了"
+                    message = "轮到你了 · ${latest.turn.other().name}"
                 )
                 _state.update { it.copy(game = afterAi) }
                 completeIfNeeded(afterAi)
@@ -571,12 +571,13 @@ class OoxxViewModel(application: Application) : AndroidViewModel(application) {
             if (index in remove) Mark.EMPTY else mark
         })
         val restoredMoves = (session.moves - remove.size).coerceAtLeast(0)
+        val restoredTurn = if (restoredMoves % 2 == 0) Mark.X else Mark.O
         _state.update {
             it.copy(game = session.copy(
                 board = restored,
-                turn = if (restoredMoves % 2 == 0) Mark.X else Mark.O,
+                turn = restoredTurn,
                 moves = restoredMoves,
-                message = "已悔棋，轮到你了"
+                message = "已悔棋，轮到你了 · ${restoredTurn.name}"
             ))
         }
     }

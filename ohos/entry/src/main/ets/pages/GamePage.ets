@@ -166,22 +166,49 @@ export struct GamePage {
       .border({ width: 1, color: this.theme().LINE })
       Blank()
       Row() {
-        Column({ space: 3 }) {
-          Text('↶').fontSize(24).fontColor(this.theme().INK)
-          Text('悔棋').fontSize(12).fontColor(this.theme().MUTED)
-        }.layoutWeight(1).onClick(() => this.onUndo())
-        Column({ space: 3 }) {
-          Text('☺').fontSize(24).fontColor(this.theme().INK)
-          Text('表情').fontSize(12).fontColor(this.theme().MUTED)
-        }.layoutWeight(1)
-        Column({ space: 3 }) {
-          Text('⚑').fontSize(24).fontColor(this.theme().INK)
-          Text('认输').fontSize(12).fontColor(this.theme().MUTED)
-        }.layoutWeight(1).onClick(() => this.onSurrender())
+        Column() {
+          Row() {
+            Text('↶').fontSize(24).fontColor(this.theme().INK)
+          }.width('100%').height(27).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
+          Row() {
+            Text('悔棋').fontSize(12).fontColor(this.theme().MUTED)
+          }.width('100%').height(17).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
+        }
+        .layoutWeight(1)
+        .height(44)
+        .alignItems(HorizontalAlign.Center)
+        .justifyContent(FlexAlign.Center)
+        .onClick(() => this.onUndo())
+        Column() {
+          Row() {
+            Text('☺').fontSize(24).fontColor(this.theme().INK)
+          }.width('100%').height(27).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
+          Row() {
+            Text('表情').fontSize(12).fontColor(this.theme().MUTED)
+          }.width('100%').height(17).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
+        }
+        .layoutWeight(1)
+        .height(44)
+        .alignItems(HorizontalAlign.Center)
+        .justifyContent(FlexAlign.Center)
+        Column() {
+          Row() {
+            Text('⚑').fontSize(24).fontColor(this.theme().INK)
+          }.width('100%').height(27).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
+          Row() {
+            Text('认输').fontSize(12).fontColor(this.theme().MUTED)
+          }.width('100%').height(17).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
+        }
+        .layoutWeight(1)
+        .height(44)
+        .alignItems(HorizontalAlign.Center)
+        .justifyContent(FlexAlign.Center)
+        .onClick(() => this.onSurrender())
       }
       .width('100%')
       .height(64)
       .padding({ bottom: OoxxSpacing.PAGE })
+      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .height('100%')

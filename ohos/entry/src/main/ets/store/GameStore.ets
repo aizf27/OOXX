@@ -66,11 +66,11 @@ export class GameStore {
         '请选择唯一最优的一步', daily.answer);
       return;
     }
-    let message = '轮到你了';
+    let message = '轮到你了 · X';
     if (kind === GameKind.NETWORK || kind === GameKind.BLUETOOTH) {
       message = '等待跨端连接';
     } else if (kind === GameKind.LOCAL) {
-      message = '轮到 X';
+      message = '轮到你了 · X';
     }
     this.session = new GameSession(new Board(), Mark.X, Mark.X, kind, 0, message);
   }
@@ -101,7 +101,7 @@ export class GameStore {
     const nextTurn = oppositeMark(this.session.turn);
     const isAi = this.session.kind === GameKind.AI_3X3 || this.session.kind === GameKind.AI_5X5;
     this.session = this.copySession(board, nextTurn, this.session.moves + 1,
-      isAi ? '对手思考中…' : `轮到 ${nextTurn}`, null, isAi);
+      isAi ? '对手思考中…' : `轮到你了 · ${nextTurn}`, null, isAi);
     if (await this.completeIfNeeded()) {
       return new MoveDecision(MoveHandling.LOCAL_APPLIED, this.session.message);
     }
@@ -145,7 +145,7 @@ export class GameStore {
     }
     const board: Board = this.session.board.place(move, this.session.turn);
     this.session = this.copySession(board, oppositeMark(this.session.turn), this.session.moves + 1,
-      '轮到你了', null, false);
+      `轮到你了 · ${oppositeMark(this.session.turn)}`, null, false);
     await this.completeIfNeeded();
     return true;
   }

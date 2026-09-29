@@ -65,7 +65,7 @@ export class GameSession {
   readonly opponentName: string | null;
 
   constructor(board: Board = new Board(), turn: Mark = Mark.X, playerMark: Mark = Mark.X,
-    kind: GameKind = GameKind.AI_3X3, moves: number = 0, message: string = '轮到你了',
+    kind: GameKind = GameKind.AI_3X3, moves: number = 0, message: string = '轮到你了 · X',
     puzzleAnswer: Move | null = null, puzzleSolved: boolean | null = null, isAiThinking: boolean = false,
     logicBoard: LogicBoard | null = null, logicHistory: LogicBoard[] = [], opponentName: string | null = null) {
     this.board = board;

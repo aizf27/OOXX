@@ -18,21 +18,46 @@ export class RoomService {
   join(code, client) {
     const room = this.get(code);
     if (room.players.some((player) => player.id === client.id)) return room;
+    const spectatorIndex = room.spectators.findIndex((player) => player.id === client.id);
     if (room.players.length < 2 && room.status === "WAITING") {
-      room.players.push({ ...client, mark: "O" }); room.status = "PLAYING";
-    } else room.spectators.push(client);
+      if (spectatorIndex >= 0) room.spectators.splice(spectatorIndex, 1);
+      const mark = room.players.some((player) => player.mark === "X") ? "O" : "X";
+      room.players.push({ ...client, mark });
+      room.status = "PLAYING";
+    } else if (spectatorIndex < 0) room.spectators.push(client);
     return room;
   }
 
   leave(code, clientId) {
-    const room = this.rooms.get(code);
+    const normalizedCode = String(code).toUpperCase();
+    const room = this.rooms.get(normalizedCode);
     if (!room) return null;
-    room.players = room.players.filter((player) => player.id !== clientId);
-    room.spectators = room.spectators.filter((player) => player.id !== clientId);
+    const playerIndex = room.players.findIndex((player) => player.id === clientId);
+    const spectatorIndex = room.spectators.findIndex((player) => player.id === clientId);
+    if (playerIndex < 0 && spectatorIndex < 0) return room;
+
     room.connections.delete(clientId);
-    if (room.players.length === 0) this.rooms.delete(code);
-    else if (room.status === "PLAYING") { room.status = "WAITING"; room.turn = "X"; }
+    if (spectatorIndex >= 0) {
+      room.spectators.splice(spectatorIndex, 1);
+      return room;
+    }
+
+    room.players.splice(playerIndex, 1);
+    if (room.players.length === 0) {
+      room.connections.clear();
+      this.rooms.delete(normalizedCode);
+      return null;
+    }
+    if (room.status === "PLAYING") this.resetToWaiting(room);
     return room;
+  }
+
+  resetToWaiting(room) {
+    room.players = room.players.map((player, index) => ({ ...player, mark: index === 0 ? "X" : "O" }));
+    room.board = createBoard(room.size);
+    room.turn = "X";
+    room.status = "WAITING";
+    room.winner = null;
   }
 
   async move(code, clientId, row, col) {

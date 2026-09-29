@@ -241,7 +241,7 @@ export class MatchStore {
       return '观战中';
     }
     if (room.turn === room.yourMark) {
-      return '轮到你了';
+      return `轮到你了 · ${room.turn}`;
     }
     return '等待对方落子…';
   }
