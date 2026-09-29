@@ -89,6 +89,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -278,7 +279,7 @@ private fun DemoBoard() {
 @Composable
 private fun HomeScreen(openMode: () -> Unit, local: () -> Unit, room: () -> Unit, daily: () -> Unit) {
     LazyColumn(
-        Modifier.fillMaxSize().statusBarsPadding(),
+        Modifier.fillMaxSize().statusBarsPadding().testTag("home_screen"),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -367,7 +368,7 @@ private fun InfoStrip(text: String) {
 @Composable
 private fun ModeScreen(loading: Boolean, back: () -> Unit, start: (GameKind) -> Unit) {
     var selected by remember { mutableStateOf(GameKind.AI_3X3) }
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(18.dp)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().padding(18.dp).testTag("mode_screen")) {
         PageTitle("选择模式", back)
         Spacer(Modifier.height(13.dp))
         ModeOption("▦", "经典 3×3", "和 AI 对战 · 三子连线获胜", GameKind.AI_3X3, selected) { selected = it }
@@ -577,7 +578,7 @@ private fun ConnectionTab(text: String, icon: ImageVector, selected: Boolean, mo
 @Composable
 private fun GameScreen(session: GameSession, play: (Move) -> Unit, undo: () -> Unit, reset: () -> Unit, surrender: () -> Unit) {
     Column(
-        Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 18.dp),
+        Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 18.dp).testTag("game_screen"),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (session.kind == GameKind.LOGIC_6X6) {
@@ -710,6 +711,7 @@ private fun GameBoard(board: Board, enabled: Boolean, onMove: (Move) -> Unit) {
                     val mark = board[row, col]
                     Box(
                         Modifier.weight(1f).fillMaxHeight().border(1.dp, Ink.copy(.62f))
+                            .testTag("board_${row}_${col}")
                             .clickable(enabled = enabled && mark == Mark.EMPTY) { onMove(Move(row, col)) },
                         contentAlignment = Alignment.Center
                     ) {
@@ -798,7 +800,7 @@ private fun HistoryScreen(records: List<MatchRecord>, ranking: List<RankingEntry
     val wins = records.count { it.result == MatchResult.WIN }
     val rate = if (records.isEmpty()) 0 else wins * 100 / records.size
     LazyColumn(
-        Modifier.fillMaxSize().statusBarsPadding(),
+        Modifier.fillMaxSize().statusBarsPadding().testTag("history_screen"),
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
@@ -905,7 +907,7 @@ private fun ProfileScreen(
 ) {
     val wins = records.count { it.result == MatchResult.WIN }
     LazyColumn(
-        Modifier.fillMaxSize().statusBarsPadding(),
+        Modifier.fillMaxSize().statusBarsPadding().testTag("profile_screen"),
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {

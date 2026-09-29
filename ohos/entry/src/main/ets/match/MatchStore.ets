@@ -1,7 +1,7 @@
 import { AppScreen, GameKind, GameSession, MatchResult, NetworkRoom } from '../model/AppModels';
 import { Mark, Move } from '../model/GameModels';
 import { PreferenceStore } from '../service/PreferenceStore';
-import { MatchConnection } from './MatchTransport';
+import { MatchConnection, MatchTransport } from './MatchTransport';
 import {
   ConnectedRoomEvent,
   FailureRoomEvent,
@@ -13,6 +13,7 @@ import {
   RoomEventUnion
 } from './RoomProtocol';
 import { WebSocketMatchClient } from './WebSocketMatchClient';
+import { formatTurnPrompt, TurnPromptStatus } from '../service/TurnPrompt';
 
 const WS_URL = 'ws://47.243.15.216:9527/ws';
 
@@ -30,10 +31,18 @@ export class MatchStore {
   private awaitingRoomState: boolean = false;
   private playerId: string | null = null;
   private listener: MatchStateListener | null = null;
+  private readonly transport: MatchTransport;
+  private readonly playerIdProvider: () => string;
+
+  constructor(transport: MatchTransport = new WebSocketMatchClient(WS_URL),
+    playerIdProvider: () => string = () => PreferenceStore.getInstance().loadPlayerId()) {
+    this.transport = transport;
+    this.playerIdProvider = playerIdProvider;
+  }
 
   private getPlayerId(): string {
     if (this.playerId === null) {
-      this.playerId = PreferenceStore.getInstance().loadPlayerId();
+      this.playerId = this.playerIdProvider();
     }
     return this.playerId;
   }
@@ -114,7 +123,7 @@ export class MatchStore {
     this.connecting = true;
     this.updateNetwork({ connecting: true, error: null });
     try {
-      const conn = await new WebSocketMatchClient(WS_URL).connect();
+      const conn = await this.transport.connect();
       this.connection = conn;
       this.connecting = false;
       this.updateNetwork({ connecting: false, statusMessage: '已连接服务器' });
@@ -241,9 +250,9 @@ export class MatchStore {
       return '观战中';
     }
     if (room.turn === room.yourMark) {
-      return `轮到你了 · ${room.turn}`;
+      return formatTurnPrompt(room.turn, TurnPromptStatus.YOUR_TURN);
     }
-    return '等待对方落子…';
+    return formatTurnPrompt(room.turn, TurnPromptStatus.WAITING_OPPONENT);
   }
 
   private errorText(code: string): string {

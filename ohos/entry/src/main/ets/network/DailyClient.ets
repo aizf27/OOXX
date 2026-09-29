@@ -6,18 +6,21 @@ import { DailyPuzzlePayload } from './ApiContracts';
 
 const BASE_URL = 'http://47.243.15.216:9527';
 
-export class DailyClient {
-  private readonly baseUrl: string;
+export interface DailyHttpResponse {
+  responseCode: number;
+  result: string | Object;
+}
 
-  constructor(baseUrl: string = BASE_URL) {
-    this.baseUrl = baseUrl;
-  }
+export interface DailyHttpRequester {
+  request(url: string): Promise<DailyHttpResponse>;
+}
 
-  async fetchDailyPuzzle(): Promise<Puzzle | null> {
+class SystemDailyHttpRequester implements DailyHttpRequester {
+  async request(url: string): Promise<DailyHttpResponse> {
+    const httpClient = http.createHttp();
     try {
-      const httpClient = http.createHttp();
       const response = await new Promise<http.HttpResponse>((resolve, reject) => {
-        httpClient.request(`${this.baseUrl}/games/daily`, {
+        httpClient.request(url, {
           method: http.RequestMethod.GET,
           header: { 'Content-Type': 'application/json' },
           connectTimeout: 8000,
@@ -30,7 +33,28 @@ export class DailyClient {
           }
         });
       });
+      return {
+        responseCode: response.responseCode,
+        result: response.result as string | Object
+      };
+    } finally {
       httpClient.destroy();
+    }
+  }
+}
+
+export class DailyClient {
+  private readonly baseUrl: string;
+  private readonly requester: DailyHttpRequester;
+
+  constructor(baseUrl: string = BASE_URL, requester: DailyHttpRequester = new SystemDailyHttpRequester()) {
+    this.baseUrl = baseUrl;
+    this.requester = requester;
+  }
+
+  async fetchDailyPuzzle(): Promise<Puzzle | null> {
+    try {
+      const response = await this.requester.request(`${this.baseUrl}/games/daily`);
       if (response.responseCode !== 200) {
         return null;
       }
@@ -49,7 +73,7 @@ export class DailyClient {
   }
 
   private parsePayload(payload: DailyPuzzlePayload): Puzzle | null {
-    if (!payload.board || payload.board.length !== payload.size * payload.size) {
+    if (!payload.board || payload.board.length !== payload.size * payload.size || !payload.answer) {
       return null;
     }
     const cells: Mark[] = [];

@@ -9,8 +9,11 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.kangsi.ooxx.data.DailyPuzzleRepository
+import com.kangsi.ooxx.data.GameRecordRepository
 import com.kangsi.ooxx.data.LocalGameRepository
 import com.kangsi.ooxx.data.MatchRecord
 import com.kangsi.ooxx.data.MatchResult
@@ -84,9 +87,13 @@ data class Settings(
     val darkMode: Boolean = false
 )
 
-class OoxxViewModel(application: Application) : AndroidViewModel(application) {
-    private val local = LocalGameRepository(application)
-    private val network = NetworkGameRepository()
+class OoxxViewModel @JvmOverloads constructor(
+    application: Application,
+    private val local: GameRecordRepository = LocalGameRepository(application),
+    private val network: DailyPuzzleRepository = NetworkGameRepository(),
+    private val matchConnector: suspend () -> MatchConnection = { WebSocketMatchClient().connect() },
+    private val startupDelayMillis: Long = 900L
+) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("ooxx_settings", Context.MODE_PRIVATE)
     private val tone by lazy {
         runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 80) }.getOrNull()
@@ -106,7 +113,7 @@ class OoxxViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
-            delay(900)
+            delay(startupDelayMillis)
             if (_state.value.screen == Screen.SPLASH) navigate(Screen.ONBOARDING)
         }
     }
@@ -160,13 +167,15 @@ class OoxxViewModel(application: Application) : AndroidViewModel(application) {
         if (btRole != null) closeMatch()
         matchConnection?.let { return it }
         _state.update { it.copy(network = it.network.copy(connecting = true, error = null)) }
-        val connection = runCatching { WebSocketMatchClient().connect() }.getOrElse {
+        val connection = runCatching { matchConnector() }.getOrElse { error ->
+            Log.e(TAG, "连接对战服务器失败", error)
             _state.update { state ->
                 state.copy(network = state.network.copy(connecting = false, error = "无法连接对战服务器，请稍后再试"))
             }
             return null
         }
         matchConnection = connection
+        Log.i(TAG, "已连接对战服务器")
         _state.update { it.copy(network = it.network.copy(connecting = false, statusMessage = "已连接服务器")) }
         runCatching { connection.send(RoomProtocol.hello(playerId, "康思")) }
             .onFailure { closeMatch() }
@@ -468,8 +477,8 @@ class OoxxViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun begin(game: GameSession) {
-        _state.update { it.copy(screen = Screen.GAME, game = game, result = null, networkMessage = "") }
+    private fun begin(game: GameSession, networkMessage: String = "") {
+        _state.update { it.copy(screen = Screen.GAME, game = game, result = null, networkMessage = networkMessage) }
     }
 
     fun play(move: Move) {
@@ -647,17 +656,25 @@ class OoxxViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(isLoadingPuzzle = true, networkMessage = "正在从网络获取今日题目…") }
         viewModelScope.launch {
             val remote = network.fetchDailyPuzzle()
+            remote.exceptionOrNull()?.let { Log.e(TAG, "每日挑战使用本地降级题目", it) }
             val puzzle: Puzzle = remote.getOrElse { network.fallbackPuzzle() }
             val message = if (remote.isSuccess) "题目已从服务器获取并校验唯一解" else "服务器暂不可用，已生成本地唯一解题目"
-            _state.update { it.copy(isLoadingPuzzle = false, networkMessage = message) }
-            begin(GameSession(
-                board = puzzle.board,
-                turn = puzzle.player,
-                playerMark = puzzle.player,
-                kind = GameKind.DAILY,
-                message = "请选择唯一最优的一步",
-                puzzleAnswer = puzzle.answer
-            ))
+            _state.update { it.copy(isLoadingPuzzle = false) }
+            begin(
+                game = GameSession(
+                    board = puzzle.board,
+                    turn = puzzle.player,
+                    playerMark = puzzle.player,
+                    kind = GameKind.DAILY,
+                    message = "请选择唯一最优的一步",
+                    puzzleAnswer = puzzle.answer
+                ),
+                networkMessage = message
+            )
         }
+    }
+
+    private companion object {
+        const val TAG = "OoxxViewModel"
     }
 }

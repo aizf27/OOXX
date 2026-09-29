@@ -3,6 +3,7 @@ import { Board, Mark, Move, oppositeMark, Puzzle } from '../model/GameModels';
 import { RecordRepository } from '../repository/GameRepository';
 import { GameEngine } from '../service/GameEngine';
 import { LogicBoard, LogicPuzzleEngine } from '../service/LogicPuzzleEngine';
+import { formatTurnPrompt, TurnPromptStatus } from '../service/TurnPrompt';
 
 export enum MoveHandling {
   LOCAL_APPLIED = 'LOCAL_APPLIED',
@@ -51,7 +52,7 @@ export class GameStore {
     this.recorded = false;
     this.result = null;
     if (kind === GameKind.AI_5X5) {
-      this.session = new GameSession(new Board(5, 4), Mark.X, Mark.X, kind);
+      this.session = new GameSession(new Board(5, 4), Mark.X, Mark.X, kind, 0, formatTurnPrompt(Mark.X));
       return;
     }
     if (kind === GameKind.LOGIC_6X6) {
@@ -66,11 +67,9 @@ export class GameStore {
         '请选择唯一最优的一步', daily.answer);
       return;
     }
-    let message = '轮到你了 · X';
+    let message = formatTurnPrompt(Mark.X);
     if (kind === GameKind.NETWORK || kind === GameKind.BLUETOOTH) {
       message = '等待跨端连接';
-    } else if (kind === GameKind.LOCAL) {
-      message = '轮到你了 · X';
     }
     this.session = new GameSession(new Board(), Mark.X, Mark.X, kind, 0, message);
   }
@@ -101,7 +100,7 @@ export class GameStore {
     const nextTurn = oppositeMark(this.session.turn);
     const isAi = this.session.kind === GameKind.AI_3X3 || this.session.kind === GameKind.AI_5X5;
     this.session = this.copySession(board, nextTurn, this.session.moves + 1,
-      isAi ? '对手思考中…' : `轮到你了 · ${nextTurn}`, null, isAi);
+      isAi ? formatTurnPrompt(nextTurn, TurnPromptStatus.AI_THINKING) : formatTurnPrompt(nextTurn), null, isAi);
     if (await this.completeIfNeeded()) {
       return new MoveDecision(MoveHandling.LOCAL_APPLIED, this.session.message);
     }
@@ -144,8 +143,9 @@ export class GameStore {
       return false;
     }
     const board: Board = this.session.board.place(move, this.session.turn);
-    this.session = this.copySession(board, oppositeMark(this.session.turn), this.session.moves + 1,
-      `轮到你了 · ${oppositeMark(this.session.turn)}`, null, false);
+    const nextTurn = oppositeMark(this.session.turn);
+    this.session = this.copySession(board, nextTurn, this.session.moves + 1,
+      formatTurnPrompt(nextTurn), null, false);
     await this.completeIfNeeded();
     return true;
   }

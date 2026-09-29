@@ -8,6 +8,7 @@ struct BoardCell {
   @Prop color: string = OoxxTheme.light.INK;
   @Prop invalid: boolean = false;
   @Prop cellSize: number = 86;
+  @Prop cellId: string = '';
   onTap: () => void = () => {};
 
   theme(): OoxxTheme {
@@ -16,6 +17,7 @@ struct BoardCell {
 
   build() {
     Text(this.value)
+      .id(this.cellId)
       .width(this.cellSize)
       .height(this.cellSize)
       .textAlign(TextAlign.Center)
@@ -109,6 +111,7 @@ export struct GamePage {
           value: this.board[index],
           color: this.cellColor(index),
           cellSize: this.cellSize(),
+          cellId: `board_cell_${index}`,
           onTap: () => this.onTapCell(index)
         })
       }, (index: number) => index.toString())
@@ -118,7 +121,7 @@ export struct GamePage {
   build() {
     Column() {
       Row() {
-        Text('‹').fontSize(34).fontColor(this.theme().INK).onClick(() => this.onBack())
+        Text('‹').id('game_back').fontSize(34).fontColor(this.theme().INK).onClick(() => this.onBack())
         Blank()
         Text('对战中').fontSize(20).fontWeight(FontWeight.Bold).fontColor(this.theme().INK)
         Blank()
@@ -145,6 +148,8 @@ export struct GamePage {
         .fontSize(21)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.theme().INK)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
         .padding({ left: 20, right: 20, top: 10, bottom: 10 })
         .backgroundColor(this.theme().SUNNY)
         .borderRadius(OoxxRadius.BUTTON)

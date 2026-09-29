@@ -123,6 +123,9 @@ struct Index {
     this.tapFeedback();
     this.syncGameState();
     if (this.gameStore.session.isAiThinking) {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 300);
+      });
       await this.gameStore.playAiTurn();
       this.tapFeedback();
       this.syncGameState();
